@@ -81,9 +81,9 @@ h1, h2, p { overflow-wrap: break-word; }
 .planner-body fieldset { border: 0; padding: 0; margin: 34px 0 24px; }
 .planner-body legend { font-size: 14px; font-weight: 800; margin-bottom: 13px; }
 .chips { display: flex; gap: 8px; flex-wrap: wrap; }
-.chips button, .chips input, .popular button { min-height: 38px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: white; font-size: 13px; font-weight: 650; cursor: pointer; transition: .18s ease; }
-.chips button:hover, .popular button:hover { border-color: var(--trip); color: var(--trip); transform: translateY(-1px); }
-.chips button.selected { color: white; border-color: var(--trip); background: var(--trip); }
+.chips button, .chips input, .popular button { min-height: 38px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: white; font-size: 13px; font-weight: 650; cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease; }
+.chips button:hover, .popular button:hover { border-color: var(--trip); color: var(--trip); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(28,93,153,.15); }
+.chips button.selected { color: white; border-color: var(--trip); background: var(--trip); transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease; }
 .chips input { width: 110px; outline: 0; cursor: text; }
 .helper { margin: 10px 0 0; color: var(--muted); font-size: 12px; }
 .optional-toggle { width: 100%; border: 0; border-top: 1px dashed var(--line); border-bottom: 1px dashed var(--line); background: none; padding: 18px 0; text-align: left; font-size: 14px; font-weight: 750; cursor: pointer; }
