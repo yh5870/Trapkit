@@ -1,0 +1,14 @@
+{
+  "__mock": { "mode": "success" },
+  "page": { "title": "트립킷", "tagline": "입력 한 번으로 끝내는 여행 준비", "prompt": "어디로 떠나세요?" },
+  "view": {
+    "placeholders": { "destination": "예: 일본 삿포로, 다낭, 제주도" },
+    "purposeChips": ["휴양", "관광", "스키", "서핑/수영", "트레킹", "출장", "배낭여행", "가족여행", "촬영"],
+    "optionalFields": { "durationLabel": "기간 (박수)", "monthLabel": "출발 월", "companionOptions": ["혼자", "커플", "친구", "가족·유아 동반"] },
+    "recentTrips": [
+      { "id": "sapporo-ski", "title": "삿포로 스키 여행", "meta": "12월 · 진행률 8/26" },
+      { "id": "danang-family", "title": "다낭 가족 휴양", "meta": "7월 · 진행률 23/23 ✓" }
+    ],
+    "baggageShortcut": { "title": "이거 기내 반입 되나요?", "subtitle": "수화물 체커 바로가기", "popularChips": ["보조배터리", "선크림", "라이터", "전자담배", "향수"] }
+  }
+}

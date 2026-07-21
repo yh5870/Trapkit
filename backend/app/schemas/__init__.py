@@ -1,0 +1,1 @@
+"""Pydantic schemas (요청/응답)."""

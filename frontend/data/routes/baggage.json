@@ -1,0 +1,49 @@
+{
+  "__mock": { "mode": "success" },
+  "page": { "title": "수화물 체커", "prompt": "무엇을 가져가시나요?" },
+  "view": {
+    "flightTypes": ["국제선", "국내선"],
+    "units": ["ml", "g", "mAh", "Wh", "cm", "개"],
+    "popularChips": ["보조배터리", "선크림", "라이터", "전자담배", "향수", "헤어스프레이", "손톱깎이", "상비약", "유아 이유식", "노트북"],
+    "recentSearches": ["보조배터리 20000mAh", "선크림 150ml"],
+    "notice": "본 판정은 국토교통부 고시 및 일반적인 국제 기준(IATA)을 바탕으로 한 참고 정보입니다. 항공사·출발 국가에 따라 세부 규정이 다를 수 있으니, 최종 확인은 이용 항공사 안내를 따르세요.",
+    "verdicts": [
+      {
+        "match": ["선크림", "sunscreen"], "title": "선크림 150ml",
+        "carryOn": { "verdict": "forbidden", "label": "불가 ✕", "reason": "액체류는 개별 용기 100ml 이하만 기내 반입할 수 있습니다. 150ml 용기는 내용물이 절반만 남았더라도 반입할 수 없습니다." },
+        "checked": { "verdict": "allowed", "label": "가능 ○", "reason": "일반 액체류는 위탁 수화물 제한이 없습니다." },
+        "tips": "100ml 이하 용기에 소분하면 기내 반입이 가능합니다. 소분 용기들은 1L 이하 투명 지퍼백 1개에 담아야 합니다.", "source": "rule_db", "reference": "국토교통부 항공보안 고시"
+      },
+      {
+        "match": ["보조배터리", "배터리", "power bank"], "title": "보조배터리 20000mAh (약 74Wh)",
+        "carryOn": { "verdict": "allowed", "label": "가능 ○", "reason": "100Wh 이하 리튬이온 배터리는 기내 반입이 가능합니다. (100~160Wh는 항공사 승인 필요, 통상 2개까지)" },
+        "checked": { "verdict": "forbidden", "label": "불가 ✕", "reason": "리튬이온 배터리는 화재 위험 때문에 위탁 수화물에 넣을 수 없습니다." },
+        "tips": "160Wh 초과는 운송 자체가 불가합니다.", "source": "rule_db", "reference": "국토교통부 항공보안 고시"
+      },
+      {
+        "match": ["헤어스프레이", "스프레이"], "title": "헤어스프레이 300ml",
+        "carryOn": { "verdict": "forbidden", "label": "불가 ✕", "reason": "액체·에어로졸 100ml 초과는 기내 반입할 수 없습니다." },
+        "checked": { "verdict": "conditional", "label": "조건부 가능 △", "reason": "개당 500ml 이하, 총 2L 이하의 인화성 없는 생활용 에어로졸만 위탁 가능합니다." },
+        "tips": "여행용 미니 사이즈(100ml 이하)를 구매하면 기내 반입이 가능합니다.", "source": "rule_db", "reference": "국토교통부 항공보안 고시"
+      },
+      {
+        "match": ["라이터"], "title": "라이터",
+        "carryOn": { "verdict": "conditional", "label": "조건부 가능 △", "reason": "일반 라이터는 1인 1개까지 몸에 소지한 경우에만 기내 반입 가능합니다." },
+        "checked": { "verdict": "forbidden", "label": "불가 ✕", "reason": "인화성 물질은 위탁 수화물에 넣을 수 없습니다." },
+        "tips": "터보(제트) 라이터는 기내·위탁 모두 불가합니다.", "source": "rule_db", "reference": "국토교통부 항공보안 고시"
+      },
+      {
+        "match": ["손톱깎이"], "title": "손톱깎이",
+        "carryOn": { "verdict": "allowed", "label": "가능 ○", "reason": "날 길이가 6cm 이하인 생활용 도구는 기내 반입이 가능합니다." },
+        "checked": { "verdict": "allowed", "label": "가능 ○", "reason": "위탁 수화물 제한이 없습니다." },
+        "tips": null, "source": "rule_db", "reference": "국토교통부 항공보안 고시"
+      }
+    ],
+    "aiFallback": {
+      "title": "{입력값}",
+      "carryOn": { "verdict": "conditional", "label": "조건부 가능 △", "reason": "일반적인 기준으로는 조건부 반입 대상입니다. 세부 사양에 따라 달라질 수 있습니다." },
+      "checked": { "verdict": "allowed", "label": "가능 ○", "reason": "일반적인 기준으로는 위탁 가능합니다." },
+      "tips": "정확한 판정을 위해 용량·사양을 함께 입력해 주세요.", "source": "ai", "reference": "AI 판정"
+    }
+  }
+}
