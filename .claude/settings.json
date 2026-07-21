@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pdftotext 'c:\\\\Users\\\\tjswn\\\\RBX\\\\Trapkit-fresh\\\\backend\\\\docs\\\\backend_implementation_plan \\(1\\).pdf' -)",
+      "Bash(pip install *)"
+    ]
+  }
+}
