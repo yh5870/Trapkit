@@ -75,11 +75,13 @@ h1, h2, p { overflow-wrap: break-word; }
 .hero-copy > p:last-child { width: min(560px, 100%); margin: 28px 0 0; color: var(--muted); font-size: 16px; line-height: 1.75; }
 .route-stamp { aspect-ratio: 1; border: 1px solid rgba(28,93,153,.35); border-radius: 50%; position: relative; display: grid; grid-template-columns: 1fr 80px 1fr; place-items: center; color: var(--trip); font: 900 27px/1 Arial, sans-serif; transform: rotate(5deg); }
 .route-stamp::before, .route-stamp::after { content: ""; position: absolute; border-radius: 50%; inset: 13px; border: 1px dashed rgba(28,93,153,.32); }
+.route-stamp::before { animation: dashRotate 10s linear infinite; }
 .route-stamp::after { inset: -11px; border-style: solid; border-color: rgba(28,93,153,.1); }
 .route-stamp i { z-index: 1; width: 70px; height: 70px; border-radius: 50%; display: grid; place-items: center; background: var(--trip); color: white; transform: rotate(-5deg); }
-.route-stamp svg { width: 34px; }
-.route-stamp span { z-index: 1; }
-.route-stamp small { position: absolute; bottom: 62px; font-size: 9px; letter-spacing: .2em; }
+.route-stamp svg { animation: planeWobble 2.8s ease-in-out infinite; }
+.route-stamp span { z-index: 1; animation: airportPulse 3.5s ease-in-out infinite; }
+.route-stamp span:last-of-type { animation-delay: 0.7s; }
+.route-stamp small { position: absolute; bottom: 62px; font-size: 9px; letter-spacing: .2em; animation: labelPulse 4s ease-in-out infinite; }
 .planner-card { margin: 25px 0 76px; background: white; border: 1px solid var(--line); border-radius: 24px; display: grid; grid-template-columns: 150px 1fr; box-shadow: var(--shadow); overflow: hidden; }
 .card-index { background: var(--trip-deep); color: white; padding: 40px 32px; display: flex; flex-direction: column; justify-content: space-between; }
 .card-index span { font: 800 52px/1 Arial, sans-serif; opacity: .25; }
@@ -406,13 +408,17 @@ h1, h2, p { overflow-wrap: break-word; }
 @keyframes planeTakeoff { 0% { transform: translateX(-10px) translateY(4px); opacity: 0; } 25% { opacity: 1; } 75% { transform: translateX(30px) translateY(-6px); opacity: 1; } 100% { transform: translateX(40px) translateY(-10px); opacity: 0; } }
 @keyframes planeHover { 0%, 100% { transform: rotate(-5deg) translateY(0); } 50% { transform: rotate(-5deg) translateY(-2px); } }
 @keyframes dashFlow { 0% { border-dashoffset: 0; } 100% { border-dashoffset: 40; } }
+@keyframes dashRotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes planeWobble { 0%, 100% { transform: rotate(-5deg) translateY(0); } 50% { transform: rotate(-5deg) translateY(-1.5px); } 25% { transform: rotate(-5deg) translateY(1px); } 75% { transform: rotate(-5deg) translateY(-1px); } }
 @keyframes luggageRock { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(2deg); } }
 @keyframes luggageRockHover { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
 @keyframes chipPopUp { to { opacity: 1; transform: translateY(0); } }
 @keyframes wobble { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(3deg); } 75% { transform: rotate(-3deg); } }
 @keyframes fadeIn { to { opacity: 1; } }
+@keyframes airportPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.9; transform: scale(0.98); } }
+@keyframes labelPulse { 0%, 100% { opacity: 0.85; } 50% { opacity: 1; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-copy h1, .eyebrow-plane svg, .route-stamp i, .route-stamp::before, .luggage-handle, .chips button,
+  .hero-copy h1, .eyebrow-plane svg, .route-stamp i, .route-stamp::before, .route-stamp span, .route-stamp small, .luggage-handle, .chips button,
   .headline-word, .headline-char, .word-wobble, .word-fade-in, .char-fade-in { animation: none !important; opacity: 1 !important; transform: none !important; }
 }

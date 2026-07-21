@@ -200,7 +200,7 @@ function Home() {
           <p>{homeData.page.tagline}. 블로그를 뒤지는 대신 이번 여행에 맞는 준비를 바로 시작하세요.</p>
         </div>
         <div className="route-stamp" aria-hidden="true">
-          <span>ICN</span><i><Plane /></i><span>CTS</span>
+          <span className="airport-code">ICN</span><i><Plane /></i><span className="airport-code">CTS</span>
           <small>DEC · SNOW ROUTE</small>
         </div>
       </section>
