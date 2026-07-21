@@ -83,8 +83,9 @@ async def reset_password(token: str, new_password: str):
 
 
 @router.delete("/me")
-async def delete_account(user_id: str = Depends(...)):
+async def delete_account():
     """회원 탈퇴."""
     # TODO: 사용자 soft delete
-    logger.info(f"회원 탈퇴: {user_id}")
+    # user_id = 인증된 사용자 ID에서 가져오기
+    logger.info("회원 탈퇴 요청")
     return {"message": "Account deleted successfully"}
