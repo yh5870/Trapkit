@@ -22,6 +22,18 @@ function Plane({ className = "" }: { className?: string }) {
   );
 }
 
+function EyebrowPlane() {
+  return (
+    <span className="eyebrow-plane" aria-hidden="true">
+      <svg width="20" height="16" viewBox="0 0 24 18" aria-hidden="true">
+        <line x1="0" y1="14" x2="24" y2="14" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.3" strokeDasharray="4 2" />
+        <path d="M3 10l4-2 4 3 5-3 3 2" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.4" />
+        <path d="M2 9l2.5-1 3 2 3.5-2 2 1 3-1.5 2 1 2.5-1" fill="currentColor" opacity="0.6" />
+      </svg>
+    </span>
+  );
+}
+
 function useAuth() {
   const [loggedIn, setLoggedInState] = useState(false);
   useEffect(() => setLoggedInState(localStorage.getItem("tripkit-auth") === "1"), []);
@@ -94,6 +106,16 @@ function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [customPurpose, setCustomPurpose] = useState("");
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const placeholders = ["예: 일본 삿포로, 다낭, 제주도", "예: 오사카, 방콕, 싱가포르", "예: 뉴욕, 파리, 런던"];
+
+  useEffect(() => {
+    if (!isInputFocused && !destination) {
+      const interval = setInterval(() => setPlaceholderIndex((prev) => (prev + 1) % placeholders.length), 3000);
+      return () => clearInterval(interval);
+    }
+  }, [isInputFocused, destination]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -110,7 +132,7 @@ function Home() {
     <Shell route="/">
       <section className="home-hero">
         <div className="hero-copy">
-          <p className="eyebrow">YOUR TRIP, PACKED RIGHT</p>
+          <p className="eyebrow">YOUR TRIP, PACKED RIGHT <EyebrowPlane /></p>
           <h1>가방을 열기 전에,<br /><em>여행을 먼저 담아요.</em></h1>
           <p>{homeData.page.tagline}. 블로그를 뒤지는 대신 이번 여행에 맞는 준비를 바로 시작하세요.</p>
         </div>
@@ -126,7 +148,14 @@ function Home() {
           <label className="field-label" htmlFor="destination">{homeData.page.prompt}</label>
           <div className={`destination-field ${error ? "invalid" : ""}`}>
             <span className="pin">●</span>
-            <input id="destination" value={destination} onChange={(e) => setDestination(e.target.value)} placeholder={homeData.view.placeholders.destination} />
+            <input
+              id="destination"
+              value={destination}
+              onChange={(e) => setDestination(e.target.value)}
+              placeholder={isInputFocused || destination ? homeData.view.placeholders.destination : placeholders[placeholderIndex]}
+              onFocus={() => setIsInputFocused(true)}
+              onBlur={() => setIsInputFocused(false)}
+            />
             <span className="airport-code">DESTINATION</span>
           </div>
           {error && <p className="field-error">{error}</p>}
@@ -134,7 +163,7 @@ function Home() {
           <fieldset>
             <legend>어떤 여행인가요?</legend>
             <div className="chips">
-              {homeData.view.purposeChips.map((purpose) => <button type="button" key={purpose} className={purposes.includes(purpose) ? "selected" : ""} onClick={() => setPurposes((current) => current.includes(purpose) ? current.filter((item) => item !== purpose) : [...current, purpose])}>{purpose}</button>)}
+              {homeData.view.purposeChips.map((purpose, index) => <button type="button" key={purpose} className={purposes.includes(purpose) ? "selected" : ""} style={{ animationDelay: `${index * 60}ms` }} onClick={() => setPurposes((current) => current.includes(purpose) ? current.filter((item) => item !== purpose) : [...current, purpose])}>{purpose}</button>)}
               <input aria-label="여행 목적 직접 입력" placeholder="직접 입력 +" value={customPurpose} onChange={(e) => setCustomPurpose(e.target.value)} />
             </div>
             {!purposes.length && !customPurpose && <p className="helper">선택하지 않으면 일반 관광 기준으로 만들어요.</p>}
