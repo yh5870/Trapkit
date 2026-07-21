@@ -120,20 +120,28 @@ function Home() {
     const timeline = [
       { step: 1, delay: 0 },      // "가방을" wobble start
       { step: 2, delay: 550 },    // wobble end, "열기 전에," fade out start
-      { step: 3, delay: 750 },    // "열기 전에," fade out end, "열" fade in
-      { step: 4, delay: 900 },    // "기" fade in
-      { step: 5, delay: 1050 },   // "전" fade in
-      { step: 6, delay: 1200 },   // "에," fade in
-      { step: 7, delay: 1500 },   // line 1 done, "여행을" wobble start
-      { step: 8, delay: 2050 },   // wobble end, "먼저" fade in
-      { step: 9, delay: 2300 },   // "담아요." fade in
+      { step: 3, delay: 700 },    // "열기 전에," fade out done
+      { step: 4, delay: 900 },    // "열기 전에," fade in start
+      { step: 5, delay: 1500 },   // line 1 done, "여행을" wobble start
+      { step: 6, delay: 2050 },   // wobble end, "먼저" fade in
+      { step: 7, delay: 2300 },   // "담아요." fade in
+      { step: 8, delay: 3000 },   // loop start
     ];
 
-    const timers = timeline.map(({ step, delay }) =>
-      setTimeout(() => setHeadlineStep(step), delay)
-    );
+    let stepIndex = 0;
+    const runAnimation = () => {
+      if (stepIndex >= timeline.length) stepIndex = 0;
+      const { step } = timeline[stepIndex];
+      setHeadlineStep(step);
+      const nextDelay = stepIndex < timeline.length - 1 ? timeline[stepIndex + 1].delay - timeline[stepIndex].delay : 3000;
+      stepIndex++;
+      animationRef.current = setTimeout(runAnimation, nextDelay);
+    };
 
-    return () => timers.forEach(clearTimeout);
+    const animationRef = { current: null as NodeJS.Timeout | null };
+    animationRef.current = setTimeout(runAnimation, 0);
+
+    return () => { if (animationRef.current) clearTimeout(animationRef.current); };
   }, [prefersReducedMotion]);
 
   useEffect(() => {
@@ -161,30 +169,30 @@ function Home() {
           <p className="eyebrow">YOUR TRIP, PACKED RIGHT <EyebrowPlane /></p>
           <h1>
             <span className="headline-word">
-              <span className={`word-fade-in ${headlineStep >= 1 && !prefersReducedMotion ? (headlineStep === 1 ? 'word-wobble' : 'word-fade-in') : ''}`}>
+              <span className={`word-fade-in ${headlineStep === 1 && !prefersReducedMotion ? 'word-wobble' : ''}`}>
                 가방을
               </span>
-              {headlineStep >= 2 && !prefersReducedMotion ? (
-                <span className="word-fade-in" style={{ opacity: 0, animation: 'fadeIn 0.18s ease-out reverse forwards' }}>
-                  열기 전에,
-                </span>
-              ) : (
-                <span className={`word-fade-in ${prefersReducedMotion ? '' : ''}`}>
-                  열기 전에,
-                </span>
-              )}
+              <span
+                className="word-fade-in"
+                style={{
+                  opacity: headlineStep >= 4 && !prefersReducedMotion ? 1 : (headlineStep >= 2 && headlineStep < 4 && !prefersReducedMotion ? 0 : 1),
+                  animation: headlineStep === 2 && !prefersReducedMotion ? 'fadeIn 0.2s ease-out reverse forwards' : (headlineStep === 4 && !prefersReducedMotion ? 'fadeIn 0.3s ease-out forwards' : 'none')
+                }}
+              >
+                열기 전에,
+              </span>
             </span>
             <br />
             <em>
               <span className="headline-word">
-                <span className={`word-fade-in ${headlineStep >= 7 && !prefersReducedMotion ? (headlineStep === 7 ? 'word-wobble' : 'word-fade-in') : ''}`}>
+                <span className={`word-fade-in ${headlineStep === 5 && !prefersReducedMotion ? 'word-wobble' : ''}`}>
                   여행을
                 </span>
               </span>
-              <span className="headline-char word-fade-in" style={{ opacity: headlineStep >= 8 || prefersReducedMotion ? 1 : 0, animation: headlineStep >= 8 && !prefersReducedMotion ? 'fadeIn 0.25s ease-out forwards' : 'none' }}>
+              <span className="headline-char word-fade-in" style={{ opacity: headlineStep >= 6 || prefersReducedMotion ? 1 : 0, animation: headlineStep === 6 && !prefersReducedMotion ? 'fadeIn 0.25s ease-out forwards' : 'none' }}>
                 먼저
               </span>
-              <span className="headline-char word-fade-in" style={{ opacity: headlineStep >= 9 || prefersReducedMotion ? 1 : 0, animation: headlineStep >= 9 && !prefersReducedMotion ? 'fadeIn 0.25s ease-out forwards' : 'none' }}>
+              <span className="headline-char word-fade-in" style={{ opacity: headlineStep >= 7 || prefersReducedMotion ? 1 : 0, animation: headlineStep === 7 && !prefersReducedMotion ? 'fadeIn 0.25s ease-out forwards' : 'none' }}>
                 담아요.
               </span>
             </em>
