@@ -172,13 +172,7 @@ function Home() {
               <span className={`word-fade-in ${headlineStep === 1 && !prefersReducedMotion ? 'word-wobble' : ''}`}>
                 가방을
               </span>
-              <span
-                className="word-fade-in"
-                style={{
-                  opacity: headlineStep >= 4 && !prefersReducedMotion ? 1 : (headlineStep >= 2 && headlineStep < 4 && !prefersReducedMotion ? 0 : 1),
-                  animation: headlineStep === 2 && !prefersReducedMotion ? 'fadeIn 0.2s ease-out reverse forwards' : (headlineStep === 4 && !prefersReducedMotion ? 'fadeIn 0.3s ease-out forwards' : 'none')
-                }}
-              >
+              <span className="word-fade-in">
                 열기 전에,
               </span>
             </span>
