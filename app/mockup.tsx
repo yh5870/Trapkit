@@ -221,7 +221,7 @@ function Trip() {
           <div>{editingTitle ? <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} onBlur={() => setEditingTitle(false)} onKeyDown={(e) => e.key === "Enter" && setEditingTitle(false)} /> : <h1 onClick={() => setEditingTitle(true)}>{title} <small>✎</small></h1>}<p>{tripData.page.meta}</p></div>
           <div className="progress-copy"><strong>{checked}<span>/{total}</span></strong><small>{percent}% 준비 완료</small></div>
         </div>
-        <div className="progress-track"><span style={{ width: `${percent}%` }} /></div>
+        <div className={`progress-track ${percent >= 80 ? "high-progress" : ""}`}><span style={{ width: `${percent}%` }} /></div>
       </section>
 
       <div className="tabs" role="tablist">{tripData.view.tabs.map((value) => <button role="tab" aria-selected={tab === value} className={tab === value ? "active" : ""} key={value} onClick={() => setTab(value)}>{value}{value === "체크리스트" && <span>{total}</span>}</button>)}</div>
