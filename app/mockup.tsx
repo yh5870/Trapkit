@@ -109,6 +109,32 @@ function Home() {
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const placeholders = ["예: 일본 삿포로, 다낭, 제주도", "예: 오사카, 방콕, 싱가포르", "예: 뉴욕, 파리, 런던"];
+  const [headlineStep, setHeadlineStep] = useState(0);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => { setPrefersReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches); }, []);
+
+  useEffect(() => {
+    if (prefersReducedMotion) return;
+
+    const timeline = [
+      { step: 1, delay: 0 },      // "가방을" wobble start
+      { step: 2, delay: 550 },    // wobble end, "열기 전에," fade out start
+      { step: 3, delay: 750 },    // "열기 전에," fade out end, "열" fade in
+      { step: 4, delay: 900 },    // "기" fade in
+      { step: 5, delay: 1050 },   // "전" fade in
+      { step: 6, delay: 1200 },   // "에," fade in
+      { step: 7, delay: 1500 },   // line 1 done, "여행을" wobble start
+      { step: 8, delay: 2050 },   // wobble end, "먼저" fade in
+      { step: 9, delay: 2300 },   // "담아요." fade in
+    ];
+
+    const timers = timeline.map(({ step, delay }) =>
+      setTimeout(() => setHeadlineStep(step), delay)
+    );
+
+    return () => timers.forEach(clearTimeout);
+  }, [prefersReducedMotion]);
 
   useEffect(() => {
     if (!isInputFocused && !destination) {
@@ -133,7 +159,36 @@ function Home() {
       <section className="home-hero">
         <div className="hero-copy">
           <p className="eyebrow">YOUR TRIP, PACKED RIGHT <EyebrowPlane /></p>
-          <h1>가방을 열기 전에,<br /><em>여행을 먼저 담아요.</em></h1>
+          <h1>
+            <span className="headline-word">
+              <span className={`word-fade-in ${headlineStep >= 1 && !prefersReducedMotion ? (headlineStep === 1 ? 'word-wobble' : 'word-fade-in') : ''}`}>
+                가방을
+              </span>
+              {headlineStep >= 2 && !prefersReducedMotion ? (
+                <span className="word-fade-in" style={{ opacity: 0, animation: 'fadeIn 0.18s ease-out reverse forwards' }}>
+                  열기 전에,
+                </span>
+              ) : (
+                <span className={`word-fade-in ${prefersReducedMotion ? '' : ''}`}>
+                  열기 전에,
+                </span>
+              )}
+            </span>
+            <br />
+            <em>
+              <span className="headline-word">
+                <span className={`word-fade-in ${headlineStep >= 7 && !prefersReducedMotion ? (headlineStep === 7 ? 'word-wobble' : 'word-fade-in') : ''}`}>
+                  여행을
+                </span>
+              </span>
+              <span className="headline-char word-fade-in" style={{ opacity: headlineStep >= 8 || prefersReducedMotion ? 1 : 0, animation: headlineStep >= 8 && !prefersReducedMotion ? 'fadeIn 0.25s ease-out forwards' : 'none' }}>
+                먼저
+              </span>
+              <span className="headline-char word-fade-in" style={{ opacity: headlineStep >= 9 || prefersReducedMotion ? 1 : 0, animation: headlineStep >= 9 && !prefersReducedMotion ? 'fadeIn 0.25s ease-out forwards' : 'none' }}>
+                담아요.
+              </span>
+            </em>
+          </h1>
           <p>{homeData.page.tagline}. 블로그를 뒤지는 대신 이번 여행에 맞는 준비를 바로 시작하세요.</p>
         </div>
         <div className="route-stamp" aria-hidden="true">
