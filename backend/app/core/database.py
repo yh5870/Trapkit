@@ -11,14 +11,23 @@ from sqlalchemy.ext.asyncio import (
 
 from app.config import settings
 
-# 비동기 엔진 생성
-engine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=settings.ENVIRONMENT == "development",
-    pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
-)
+# 비동기 엔진 생성 (DB별 호환성 고려)
+_db_url = settings.DATABASE_URL
+
+# SQLite는 pool 설정을 지원하지 않음
+engine_kwargs = {
+    "echo": settings.ENVIRONMENT == "development",
+}
+
+# PostgreSQL만 pool 설정 추가
+if "postgresql" in _db_url:
+    engine_kwargs.update({
+        "pool_pre_ping": True,
+        "pool_size": 10,
+        "max_overflow": 20,
+    })
+
+engine = create_async_engine(_db_url, **engine_kwargs)
 
 # 세션 팩토리
 async_session_maker = async_sessionmaker(
