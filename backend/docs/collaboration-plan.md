@@ -693,12 +693,12 @@ main
 
 ### Week 1
 
-- [ ] A: `domain/models/trip.py` 작성
-- [ ] A: `domain/repositories/trip_repository.py` 작성
-- [ ] A: `application/services/trip_query_service.py` 작성
+- [x] A: `domain/models/trip.py` 작성
+- [x] A: `domain/repositories/trip_repository.py` 작성
+- [x] A: `application/services/trip_query_service.py` 작성
 - [ ] B: `infrastructure/database/models/trip_model.py` 작성
 - [ ] B: `infrastructure/database/repositories/sqlalchemy_trip_repository.py` 작성
-- [ ] B: `interfaces/api/dependencies/auth.py` 작성
+- [x] B: `interfaces/api/dependencies/auth.py` 작성
 - [ ] B: `interfaces/api/v1/routes/trips.py` 작성
 - [ ] 공동: 통합 테스트 통과
 
