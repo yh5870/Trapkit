@@ -730,7 +730,84 @@ trapkit 데이터베이스
 
 ---
 
+## 🔄 Week 2 진행 상황 (2026-07-22)
+
+### A개발자 완료 작업 ✅
+
+- ✅ `application/commands/create_trip.py` 작성
+- ✅ `domain/services/trip_generation_service.py` 작성
+
+### B개발자 미완료 작업 ❌
+
+- ❌ `infrastructure/external/gemini_client.py` 작성
+- ❌ `infrastructure/external/redis_client.py` 작성
+- ❌ `POST /api/trips/generate` 스트리밍 구현
+- ❌ 스트리밍 테스트 통과
+
+### 💡 해결 필요 문제
+
+1. **infrastructure/external 디렉토리 생성 필요**
+2. **Gemini SDK 연동** (A의 AIClient 인터페이스 구현)
+3. **스트리밍 API 구현** (Server-Sent Events)
+
+---
+
+## 🚨 통합 테스트 문제 해결 (2026-07-22)
+
+### 발생 문제
+
+1. **SQLite 호환성 문제**
+   - PostgreSQL 전용 pool 설정이 SQLite에서 오류 발생
+   - `aiosqlite` 모듈 누락
+
+2. **Import 경로 오류**
+   - `app.api.dependencies` 모듈이 존재하지 않음
+   - `UserDep` 타입 대신 `str`로 직접 사용
+
+### 해결 조치
+
+#### 1. DB 설정 수정 (`app/core/database.py`)
+```python
+# SQLite는 pool 설정을 지원하지 않음
+engine_kwargs = {
+    "echo": settings.ENVIRONMENT == "development",
+}
+
+# PostgreSQL만 pool 설정 추가
+if "postgresql" in _db_url:
+    engine_kwargs.update({
+        "pool_pre_ping": True,
+        "pool_size": 10,
+        "max_overflow": 20,
+    })
+```
+
+#### 2. 테스트 conftest.py 수정
+```python
+# 테스트용 DB URL 오버라이드 (앱 초기화 전)
+os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
+os.environ["ENVIRONMENT"] = "test"
+os.environ["JWT_SECRET"] = "test-secret-key-at-least-32-chars"
+```
+
+#### 3. trip_domain.py import 수정
+```python
+# 수정 전
+from app.api.dependencies import UserDep
+
+# 수정 후
+from interfaces.api.dependencies.auth import get_current_user_id
+```
+
+### 결과
+
+- ✅ SQLite 테스트 환경 호환성 확보
+- ✅ Import 경로 문제 해결
+- ✅ 통합 테스트 실행 가능 상태
+
+---
+
 *마지막 업데이트: 2026-07-22*
-*작업 시간: 약 7시간*
-*완료율: 100%*
-*DB 연동 상태: ✅ 완전 연동*
+*작업 시간: 약 7시간 (Week 1) + 1시간 (테스트 문제 해결)*
+*Week 1 완료율: 100%*
+*Week 2 완료율: 33% (A개발자 2/6 완료)*
