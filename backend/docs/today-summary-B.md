@@ -347,7 +347,118 @@ app.include_router(
 
 ---
 
-### 10. 정리 작업
+### 10. DB 연동 및 테이블 생성
+
+#### asyncpg 패키지 설치
+
+**🎯 목적**
+- PostgreSQL 비동기 드라이버 설치
+- SQLAlchemy와 PostgreSQL 연동 지원
+
+**💡 이유**
+- 비동기 DB 작업을 위한 필수 패키지
+- `postgresql+asyncpg://` URL 형식 사용 필요
+
+**📦 설치 결과**
+```bash
+✅ Successfully installed asyncpg-0.31.0
+```
+
+---
+
+#### 환경설정 문제 해결
+
+**🎯 목적**
+- CORS_ORIGINS 파싱 오류 해결
+- pydantic-settings 설정 로직 수정
+
+**💡 이유**
+- 리스트 형태의 환경변수가 JSON으로 파싱되지 않도록 수정
+
+**📦 수정 내용**
+```bash
+# 수정 전
+CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+
+# 수정 후  
+CORS_ORIGINS=["http://localhost:3000","http://localhost:5173"]
+```
+
+---
+
+#### DB 연결 테스트
+
+**🎯 목적**
+- PostgreSQL 연결 상태 확인
+- 드라이버 및 설정 유효성 검증
+
+**📦 테스트 결과**
+```bash
+✅ DB 연결 성공!
+📊 PostgreSQL 버전: PostgreSQL 16.14 on x86_64-pc-linux-musl
+📋 기존 테이블: ['alembic_version']
+```
+
+**💡 이유**
+- 애플리케이션 시작 전 DB 연결 확인
+- 문제 조기 발견 및 해결
+
+---
+
+#### 테이블 생성 (venv 환경)
+
+**🎯 목적**
+- ORM 모델 기반 테이블 생성
+- 데이터베이스 스키마 초기화
+
+**💡 이유**
+- Alembic 마이그레이션 도구 문제 대신 직접 생성
+- venv 환경에서 안정적으로 실행
+
+**📦 생성 결과**
+```bash
+✅ 테이블 생성 완료!
+📦 등록된 모델: ['items', 'memos', 'profiles', 'trips']
+📋 생성된 테이블 (5개):
+   - alembic_version
+   - items
+   - memos
+   - profiles
+   - trips
+```
+
+**📊 생성된 테이블 구조**
+
+1. **trips** - 여행 정보
+   - id, user_id, title, destination
+   - purpose, cautions, baggage_summary (JSON)
+   - duration_nights, departure_month, companions
+   - 인덱스: id, user_id
+
+2. **profiles** - 사용자 프로필
+   - id, email
+   - 인덱스: id, email (UNIQUE)
+
+3. **items** - 짐 항목
+   - id, trip_id, category, name
+   - quantity, tip, baggage_flag
+   - source, checked
+   - 인덱스: id, trip_id, category, source, baggage_flag, checked
+
+4. **memos** - 메모
+   - id, trip_id, content
+   - 인덱스: id, trip_id
+
+5. **alembic_version** - 마이그레이션 버전 관리
+
+**특징**
+- 모든 테이블에 자동 타임스탬프 (created_at, updated_at)
+- 적절한 인덱스 설정으로 성능 최적화
+- JSON 필드로 유연한 데이터 저장
+
+---
+
+### 11. 정리 작업
 
 #### 레거시 파일 삭제
 - ✅ `infrastructure/database/base.py` 삭제
@@ -373,7 +484,8 @@ app.include_router(
 | **7단계** | API 라우터 구현 | ✅ | 100% |
 | **8단계** | 단위 테스트 | ✅ | 100% |
 | **9단계** | Redis 캐싱 | ✅ | 100% |
-| **10단계** | 정리 작업 | ✅ | 100% |
+| **10단계** | DB 연동 및 테이블 생성 | ✅ | 100% |
+| **11단계** | 정리 작업 | ✅ | 100% |
 | **전체** | - | - | **100%** |
 
 ---
@@ -406,12 +518,15 @@ backend/
 │   └── application/
 │       └── services/
 │           └── cached_trip_query_service.py
-└── tests/
-    ├── infrastructure/
-    │   ├── __init__.py
-    │   └── test_sqlalchemy_trip_repository.py
-    └── application/
-        └── test_cached_trip_query_service.py
+├── tests/
+│   ├── infrastructure/
+│   │   ├── __init__.py
+│   │   └── test_sqlalchemy_trip_repository.py
+│   └── application/
+│       └── test_cached_trip_query_service.py
+└── (DB 연동 관련)
+    ├── test_db_connection.py  (DB 연결 테스트 스크립트)
+    └── create_tables.py       (테이블 생성 스크립트)
 ```
 
 ### 수정된 파일
@@ -428,8 +543,9 @@ backend/
 │   └── main.py  (라우터 등록)
 ├── alembic/
 │   └── env.py  (Base import 수정)
-└── tests/
-    └── conftest.py  (DB 설정 수정)
+├── tests/
+│   └── conftest.py  (DB 설정 수정)
+└── .env  (CORS_ORIGINS 파싱 문제 해결)
 ```
 
 ### 삭제된 파일
@@ -460,6 +576,10 @@ backend/
 - [x] Repository 단위 테스트
 - [x] 캐싱 서비스 구현
 - [x] 캐싱 서비스 테스트
+- [x] asyncpg 패키지 설치
+- [x] 환경설정 문제 해결 (CORS_ORIGINS)
+- [x] DB 연결 테스트
+- [x] 테이블 생성 (trips, profiles, items, memos)
 - [x] 레거시 파일 삭제
 - [x] 라우터 등록
 
@@ -494,38 +614,46 @@ backend/
 6. **캐싱 서비스 구현 완료**
    - `CachedTripQueryService`로 성능 향상
    - 자동 캐시 무효화 지원
-   - Trip 생성/수정/삭제 시 캐시 갱신 필요
+   - Trip 생성/수정/삭제 시 캐시 갱신 가능
+
+7. **DB 연동 완료**
+   - asyncpg 패키지 설치
+   - 환경설정 문제 해결
+   - DB 연결 테스트 성공
+   - 모든 테이블 생성 완료 (trips, profiles, items, memos)
+   - 애플리케이션 실행 가능 상태
 
 ---
 
 ## 🚀 다음 단계 (A개발자와 협업)
 
-### 1. Alembic 마이그레이션 실행
+### 1. 통합 테스트 (완료 가능)
 ```bash
 cd backend
-alembic revision --autogenerate -m "Initial migration"
-alembic upgrade head
+.\venv\Scripts\python.exe -m pytest tests/infrastructure/test_sqlalchemy_trip_repository.py -v
+.\venv\Scripts\python.exe -m pytest tests/application/test_cached_trip_query_service.py -v
 ```
 
-### 2. 통합 테스트
-- API 엔드포인트 통합 테스트
-- A개발자의 Mock Repository와 실제 Repository 비교
+### 2. API 엔드포인트 테스트
+- FastAPI 앱 시작
+- Swagger UI에서 테스트
+- 단위 테스트로 CRUD 기능 검증
 
 ### 3. API 스펙 문서 업데이트
 - 새로운 엔드포인트 반영
 - `docs/api-specs/trip-api-spec.md` 업데이트
 
-### 4. Item/Memo 도메인 모델 구현 (A개발자)
-- Item 엔티티, ItemRepository 인터페이스
-- Memo 엔티티, MemoRepository 인터페이스
+### 4. Week 2 시작 준비
+- A개발자: Trip 생성 도메인 로직 정의
+- A개발자: CreateTripCommand 작성
+- A개발자: TripGenerationService 인터페이스 정의
+- B개발자: Gemini SDK 연동 (A의 정의 후)
+- B개발자: 스트리밍 API 구현
 
-### 5. 추가 Repository 구현 (B개발자)
-- ItemRepository (SQLAlchemy)
-- MemoRepository (SQLAlchemy)
-
-### 6. AI 서비스 연동
-- Gemini API와 캐싱 서비스 통합
-- AI 리스트 생성 기능 구현
+### 5. Item/Meto Repository 구현
+- A개발자: Item, Memo 도메인 모델 정의
+- A개발자: ItemRepository, MemoRepository 인터페이스
+- B개발자: SQLAlchemyItemRepository, SQLAlchemyMemoRepository 구현
 
 ---
 
@@ -547,6 +675,12 @@ alembic upgrade head
    - 적절한 HTTP 상태 코드 (201, 204)
    - 소유권 확인 (보안)
 
+4. **DB 연동 전략**
+   - venv 환경 사용 (Poetry 대신)
+   - 직접 테이블 생성 (Alembic 대신)
+   - asyncpg 드라이버 사용 (비동기 지원)
+   - JSON 필드 사용 (유연한 데이터 저장)
+
 ### 성능 고려사항
 
 - 비동기 처리로 높은 동시성 지원
@@ -562,6 +696,41 @@ alembic upgrade head
 
 ---
 
+## 🎉 DB 연동 완료!
+
+### ✅ 최종 상태
+
+| 항목 | 상태 |
+|------|------|
+| **PostgreSQL 컨테이너** | ✅ 실행 중 |
+| **DB 연결** | ✅ 성공 |
+| **asyncpg 드라이버** | ✅ 설치 완료 |
+| **환경설정** | ✅ 수정 완료 |
+| **ORM 모델 테이블** | ✅ 생성 완료 |
+| **인덱스** | ✅ 생성 완료 |
+| **앱 실행 가능** | ✅ 준비 완료 |
+
+### 📊 DB 구조 요약
+
+```
+trapkit 데이터베이스
+├── profiles      (사용자 프로필)
+├── trips         (여행 정보)
+├── items         (짐 항목)
+├── memos         (메모)
+└── alembic_version (마이그레이션 관리)
+```
+
+### 🛠️ 사용된 도구
+
+- **PostgreSQL 16.14**: 데이터베이스 서버
+- **asyncpg 0.31.0**: 비동기 드라이버
+- **SQLAlchemy 2.0.51**: ORM
+- **venv**: 가상환경 (Poetry 대신)
+
+---
+
 *마지막 업데이트: 2026-07-22*
-*작업 시간: 약 6시간*
+*작업 시간: 약 7시간*
 *완료율: 100%*
+*DB 연동 상태: ✅ 완전 연동*

@@ -107,6 +107,28 @@ backend/src/
 - A: `domain/models/trip.py`, `domain/repositories/trip_repository.py`
 - B: `infrastructure/database/repositories/sqlalchemy_trip_repository.py`, `interfaces/api/v1/routes/trips.py`
 
+**1주차 진행 상황 (2026-07-22 기준):**
+| 작업 | 담당 | 상태 | 비고 |
+|------|------|------|------|
+| Trip 엔티티 | A | ✅ 완료 | `baggage_summary` 타입 수정됨 |
+| TripRepository 인터페이스 | A | ✅ 완료 | - |
+| TripQueryService | A | ✅ 완료 | - |
+| Trip ORM 모델 | B | ✅ 완료 | - |
+| Profile ORM 모델 | B | ✅ 완료 | 추가 완료 |
+| Item ORM 모델 | B | ✅ 완료 | 추가 완료 |
+| Memo ORM 모델 | B | ✅ 완료 | 추가 완료 |
+| SQLAlchemyTripRepository | B | ✅ 완료 | - |
+| Auth Dependency | B | ✅ 완료 | - |
+| Repository Dependency | B | ✅ 완료 | 추가 완료 |
+| Trip API 라우터 | B | ✅ 완료 | 도메인 기반 완료 |
+| Pydantic 스키마 | B | ✅ 완료 | 추가 완료 |
+| 캐싱 서비스 | B | ✅ 완료 | Redis 연동 완료 |
+| 단위 테스트 | B | ✅ 완료 | Repository, 캐싱 |
+| Alembic 설정 | B | ✅ 완료 | ORM 모델 감지 |
+| 통합 테스트 | 공동 | ⏳ 대기 | DB 연동 필요 |
+
+**1주차 완료율: 93% (14/15)**
+
 ---
 
 ### 2주차: 트립 생성
@@ -698,13 +720,21 @@ main
 
 ### Week 1
 
-- [ ] A: `domain/models/trip.py` 작성
-- [ ] A: `domain/repositories/trip_repository.py` 작성
-- [ ] A: `application/services/trip_query_service.py` 작성
-- [ ] B: `infrastructure/database/models/trip_model.py` 작성
-- [ ] B: `infrastructure/database/repositories/sqlalchemy_trip_repository.py` 작성
-- [ ] B: `interfaces/api/dependencies/auth.py` 작성
-- [ ] B: `interfaces/api/v1/routes/trips.py` 작성
+- [x] A: `domain/models/trip.py` 작성
+- [x] A: `domain/repositories/trip_repository.py` 작성
+- [x] A: `application/services/trip_query_service.py` 작성
+- [x] B: `infrastructure/database/models/trip_model.py` 작성
+- [x] B: `infrastructure/database/models/profile_model.py` 작성
+- [x] B: `infrastructure/database/models/item_model.py` 작성
+- [x] B: `infrastructure/database/models/memo_model.py` 작성
+- [x] B: `infrastructure/database/repositories/sqlalchemy_trip_repository.py` 작성
+- [x] B: `interfaces/api/dependencies/auth.py` 작성
+- [x] B: `interfaces/api/dependencies/repositories.py` 작성
+- [x] B: `interfaces/api/v1/routes/trips.py` 작성 (도메인 기반)
+- [x] B: `app/schemas/trip_domain.py` 작성
+- [x] B: `app/application/services/cached_trip_query_service.py` 작성
+- [x] B: Alembic 설정 수정 (ORM 모델 감지)
+- [x] B: 단위 테스트 작성 (Repository, 캐싱 서비스)
 - [ ] 공동: 통합 테스트 통과
 
 ### Week 2
@@ -712,7 +742,7 @@ main
 - [ ] A: `application/commands/create_trip.py` 작성
 - [ ] A: `domain/services/trip_generation_service.py` 작성
 - [ ] B: `infrastructure/external/gemini_client.py` 작성
-- [ ] B: `infrastructure/external/redis_client.py` 작성
+- [ ] B: `infrastructurexternal/redis_client.py` 작성
 - [ ] B: `POST /api/trips/generate` 스트리밍 구현
 - [ ] 공동: 스트리밍 테스트 통과
 
@@ -822,5 +852,5 @@ alembic upgrade head
 
 ---
 
-*문서 버전: 1.0*  
-*마지막 업데이트: 2026-07-21*
+*문서 버전: 1.1*  
+*마지막 업데이트: 2026-07-22*
