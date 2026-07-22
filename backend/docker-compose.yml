@@ -39,7 +39,7 @@ services:
       JWT_SECRET: development-secret-key-change-in-production
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       ENVIRONMENT: development
-      CORS_ORIGINS: http://localhost:3000
+      CORS_ORIGINS: '["http://localhost:3000"]'
     depends_on:
       postgres:
         condition: service_healthy

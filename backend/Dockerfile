@@ -10,6 +10,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app ./app
 COPY pyproject.toml .
 COPY alembic.ini .
+COPY alembic ./alembic
 
 # 비밀번호 파일 생성 (Alembic용)
 RUN mkdir -p /app/alembic/versions && touch /app/.env
