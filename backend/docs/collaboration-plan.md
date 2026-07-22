@@ -739,8 +739,8 @@ main
 
 ### Week 2
 
-- [ ] A: `application/commands/create_trip.py` 작성
-- [ ] A: `domain/services/trip_generation_service.py` 작성
+- [x] A: `application/commands/create_trip.py` 작성
+- [x] A: `domain/services/trip_generation_service.py` 작성
 - [ ] B: `infrastructure/external/gemini_client.py` 작성
 - [ ] B: `infrastructurexternal/redis_client.py` 작성
 - [ ] B: `POST /api/trips/generate` 스트리밍 구현

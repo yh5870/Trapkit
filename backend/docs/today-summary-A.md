@@ -139,14 +139,156 @@ class TripQueryService:
 
 ---
 
-## 📊 Week 1 진행률
+## 📊 Week 1 + Week 2 진행률
 
-| 작업 | 상태 | Week 1 투두 |
-|------|------|-----------|
-| `domain/models/trip.py` 작성 | ✅ | [x] A: `domain/models/trip.py` 작성 |
-| `domain/repositories/trip_repository.py` 작성 | ✅ | [x] A: `domain/repositories/trip_repository.py` 작성 |
-| `application/services/trip_query_service.py` 작성 | ✅ | [x] A: `application/services/trip_query_service.py` 작성 |
-| `GET /api/trips` 스펙 정의 | ⏳ | [ ] A: `GET /api/trips` 스펙 정의 |
+| 작업 | 상태 | Week 1 투두 | Week 2 투두 |
+|------|------|-----------|-----------|
+| `domain/models/trip.py` 작성 | ✅ | [x] A: `domain/models/trip.py` 작성 | - |
+| `domain/repositories/trip_repository.py` 작성 | ✅ | [x] A: `domain/repositories/trip_repository.py` 작성 | - |
+| `application/services/trip_query_service.py` 작성 | ✅ | [x] A: `application/services/trip_query_service.py` 작성 | - |
+| `GET /api/trips` 스펙 정의 | ✅ | [x] A: `GET /api/trips` 스펙 정의 | - |
+| `application/commands/create_trip.py` 작성 | ✅ | - | [x] A: `application/commands/create_trip.py` 작성 |
+| `domain/services/trip_generation_service.py` 작성 | ✅ | - | [x] A: `domain/services/trip_generation_service.py` 작성 |
+
+---
+
+## ✅ 완료된 작업 (Week 2 - 트립 생성)
+
+### 5. Command 패턴 구현
+
+#### CreateTripCommand (`app/application/commands/create_trip.py`)
+
+**🎯 목적**
+- Trip 생성 유스케이스를 위한 Command 패턴 구현
+- CQRS 패턴의 Command 측면 담당
+- B개발자가 AI 서비스와 통합 시 사용
+
+**💡 이유**
+- 명령형 패턴으로 트립 생성 의도 명확화
+- 불변 Command 객체로 데이터 일관성 보장
+- API 라우터에서 쉽게 데이터 전달 가능
+
+**📦 주요 기능**
+- `frozen=True`: 불변 Command 객체
+- 필드별 타입 명확히 정의 (string, list[str], int | None)
+- 선택적 필드 지원 (duration_nights, departure_month, companions)
+
+**📦 산출물**
+```python
+@dataclass(frozen=True)
+class CreateTripCommand:
+    user_id: str
+    destination: str
+    purpose: list[str]
+    duration_nights: int | None = None
+    departure_month: int | None = None
+    companions: str | None = None
+```
+
+---
+
+### 6. 도메인 서비스 구현
+
+#### TripGenerationService (`app/domain/services/trip_generation_service.py`)
+
+**🎯 목적**
+- AI를 통한 트립 생성 도메인 로직 구현
+- B개발자의 AI 클라이언트와 연동 인터페이스 정의
+- 4단계 생성 프로세스 구현
+
+**💡 이유**
+- AI 의존성 인터페이스로 분리 (테스트 용이)
+- 도메인 로직과 인프라 분리 유지
+- B개발자가 AI 구현 완료 전에 서비스 구조 확정
+
+**📦 주요 기능**
+- `AIClient` 인터페이스 정의 (B개발자 구현용)
+- `TripGenerationService.generate()` 메서드
+- 생성 프로세스:
+  1. AI로부터 트립 콘텐츠 생성 (cautions, baggage_summary)
+  2. Trip 엔티티 생성 (Trip.create())
+  3. 저장소에 저장 (trip_repository.save())
+  4. 저장된 Trip 반환
+
+**📦 산출물**
+```python
+class AIClient(ABC):
+    @abstractmethod
+    async def generate_trip_content(self, command: CreateTripCommand) -> dict:
+        """AI를 통해 트립 콘텐츠 생성."""
+        pass
+
+class TripGenerationService:
+    def __init__(self, trip_repository: TripRepository, ai_client: AIClient):
+        self.trip_repository = trip_repository
+        self.ai_client = ai_client
+
+    async def generate(self, command: CreateTripCommand) -> Trip:
+        # AI 콘텐츠 생성
+        ai_content = await self.ai_client.generate_trip_content(command)
+        
+        # Trip 엔티티 생성
+        trip = Trip.create(
+            title=command.destination,
+            destination=command.destination,
+            purpose=command.purpose,
+            user_id=command.user_id,
+            duration_nights=command.duration_nights,
+            departure_month=command.departure_month,
+            companions=command.companions,
+            cautions=ai_content.get("cautions", []),
+            baggage_summary=ai_content.get("baggage_summary", []),
+        )
+        
+        # 저장소에 저장
+        await self.trip_repository.save(trip)
+        
+        # 저장된 Trip 반환
+        return trip
+```
+
+---
+
+## 🔄 B개발자 의존 사항 (Week 2)
+
+### B개발자가 구현해야 할 작업
+
+| 작업 | 파일 | 의존 | 현재 상태 |
+|------|------|------|----------|
+| AIClient 구현 | `infrastructure/external/gemini_client.py` | `domain/services/trip_generation_service.py` | ⏳ |
+| Redis Client 구현 | `infrastructure/external/redis_client.py` | - | ⏳ |
+| POST 스트리밍 구현 | `interfaces/api/v1/routes/trips.py` | 위 2개 파일 | ⏳ |
+
+---
+
+### ⚠️ B개발자 주의사항 (2026-07-22)
+
+#### AIClient 인터페이스 구현
+
+B개발자가 `infrastructure/external/gemini_client.py`에서 `AIClient`를 구현해야 합니다:
+
+```python
+# infrastructure/external/gemini_client.py
+from app.domain.services.trip_generation_service import AIClient
+
+class GeminiClient(AIClient):
+    async def generate_trip_content(self, command: CreateTripCommand) -> dict:
+        # Gemini API 호출 로직
+        # AI 콘텐츠 생성 (cautions, baggage_summary)
+        pass
+```
+
+**AI 콘텐츠 형식**:
+```json
+{
+    "cautions": [{"type": "weather", "message": "비 우산 챙기기"}],
+    "baggage_summary": [{"category": "clothing", "count": 5}]
+}
+```
+
+**이유**: A개발자가 정의한 인터페이스 계약 준수
+
+---
 
 ---
 
@@ -329,6 +471,10 @@ class MockTripRepository(TripRepository):
 - 코드 품질 확보 (버그 조기 발견)
 - 리팩토링 안정성 확보
 - Mock Repository를 활용한 격리된 테스트
+
+---
+
+**이유**: A개발자가 정의한 인터페이스 계약 준수
 
 ---
 
