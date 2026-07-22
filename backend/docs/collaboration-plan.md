@@ -63,7 +63,7 @@ backend/src/
 │   │       └── sqlalchemy_memo_repository.py
 │   │
 │   ├── external/              # 🔵 외부 서비스 (B)
-│   │   ├── anthropic_client.py
+│   │   ├── gemini_client.py
 │   │   └── redis_client.py
 │   │
 │   └── migrations/            # 🔵 마이그레이션 (B)
@@ -113,15 +113,15 @@ backend/src/
 
 | 작업 | A개발자 | B개발자 |
 |------|---------|---------|
-| **월** | Trip 생성 도메인 로직 | Anthropic Python SDK 연동 |
-| **화** | CreateTripCommand | Anthropic 스트리밍 구현 |
+| **월** | Trip 생성 도메인 로직 | Google Gemini Python SDK 연동 |
+| **화** | CreateTripCommand | Gemini 스트리밍 구현 |
 | **수** | TripGenerationService | Redis 캐시 서비스 |
 | **목** | `POST /api/trips/generate` 스펙 | `POST /api/trips/generate` 스트리밍 구현 |
 | **금** | 도메인 테스트 | 통합 테스트 |
 
 **2주차 산출물:**
 - A: `application/commands/create_trip.py`, `domain/services/trip_generation_service.py`
-- B: `infrastructure/external/anthropic_client.py`, `infrastructure/external/redis_client.py`
+- B: `infrastructure/external/gemini_client.py`, `infrastructure/external/redis_client.py`
 
 ---
 
@@ -235,7 +235,7 @@ from domain.models.trip import Trip
 class TripGenerationService:
     async def generate(self, command: CreateTripCommand) -> Trip:
         # AI를 통한 트립 생성 로직
-        # 실제 호출은 B의 AnthropicClient 통해
+        # 실제 호출은 B의 GeminiClient 통해
         pass
 ```
 
@@ -418,23 +418,28 @@ async def list_trips(
 
 ### Week 2: 트립 생성
 
-**파일:** `infrastructure/external/anthropic_client.py`
+**파일:** `infrastructure/external/gemini_client.py`
 ```python
-from anthropic import AsyncAnthropic
+import google.generativeai as genai
 from shared.config.settings import settings
 
-class AnthropicClient:
+class GeminiClient:
     def __init__(self):
-        self.client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        self.model = genai.GenerativeModel(settings.GEMINI_MODEL)
     
     async def generate_stream(self, prompt: str):
-        async with self.client.messages.stream(
-            model="claude-sonnet-4-20250514",
-            max_tokens=4096,
-            messages=[{"role": "user", "content": prompt}]
-        ) as stream:
-            async for text in stream.text_stream:
-                yield f"data: {text}\n\n"
+        response = self.model.generate_content(
+            prompt,
+            generation_config=genai.types.GenerationConfig(
+                max_output_tokens=4096,
+                temperature=0.7,
+            ),
+            stream=True,
+        )
+        async for chunk in response:
+            if chunk.text:
+                yield f"data: {chunk.text}\n\n"
 ```
 
 **파일:** `infrastructure/external/redis_client.py`
@@ -678,7 +683,7 @@ main
 **담당:**
 - ✅ ORM 모델 (SQLAlchemy)
 - ✅ 리포지토리 구현
-- ✅ 외부 서비스 (Anthropic, Redis)
+- ✅ 외부 서비스 (Gemini, Redis)
 - ✅ API 라우트 (FastAPI)
 - ✅ 미들웨어 (CORS, 인증)
 - ✅ 통합 테스트
@@ -706,7 +711,7 @@ main
 
 - [ ] A: `application/commands/create_trip.py` 작성
 - [ ] A: `domain/services/trip_generation_service.py` 작성
-- [ ] B: `infrastructure/external/anthropic_client.py` 작성
+- [ ] B: `infrastructure/external/gemini_client.py` 작성
 - [ ] B: `infrastructure/external/redis_client.py` 작성
 - [ ] B: `POST /api/trips/generate` 스트리밍 구현
 - [ ] 공동: 스트리밍 테스트 통과
@@ -745,17 +750,18 @@ cd backend
 
 # 2. 가상환경 생성
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# 3. 의존성 설치
-pip install poetry
-poetry install
+# 3. 가상환경 활성화
+# Windows:
+venv\Scripts\activate
 
-# 4. Docker 컨테이너 실행
+# 4. 의존성 설치
+pip install -r requirements.txt
+
+# 5. Docker 컨테이너 실행 (DB, Redis)
 docker-compose up -d
 
-# 5. Alembic 초기화
-alembic init alembic
+# 6. Alembic 초기화
 alembic revision --autogenerate -m "Initial migration"
 alembic upgrade head
 ```
@@ -766,7 +772,7 @@ alembic upgrade head
 |-----------|---------|---------|
 | `DATABASE_URL` | 로컬 PostgreSQL | 로컬 PostgreSQL |
 | `SUPABASE_URL` | 개발용 Supabase | 개발용 Supabase |
-| `ANTHROPIC_API_KEY` | 공유 | 공유 |
+| `GEMINI_API_KEY` | 공유 | 공유 |
 | `UPSTASH_REDIS_URL` | 공유 | 공유 |
 
 ---

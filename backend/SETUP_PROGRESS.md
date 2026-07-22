@@ -50,7 +50,7 @@
 
 ### 8. 환경 설정
 - **상태**: 완료
-- **`.env` 파일**: ANTHROPIC_API_KEY 설정
+- **`.env` 파일**: GEMINI_API_KEY 설정 (Anthropic → Gemini로 변경)
 - **`.vscode/settings.json`**: python.terminal.useEnvFile 활성화
 
 ---

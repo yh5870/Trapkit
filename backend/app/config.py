@@ -26,7 +26,8 @@ class Settings(BaseSettings):
     JWT_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7일
 
     # AI
-    ANTHROPIC_API_KEY: str = Field(..., description="Anthropic API 키")
+    GEMINI_API_KEY: str = Field(..., description="Google Gemini API 키")
+    GEMINI_MODEL: str = Field(default="gemini-1.5-flash", description="Gemini 모델")
     AI_MAX_TOKENS: int = 2000
     AI_CACHE_TTL: int = 86400  # 24시간
 
