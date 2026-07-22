@@ -16,14 +16,23 @@ class Base(DeclarativeBase):
     """모든 ORM 모델의 기본 클래스."""
 
 
-# 비동기 엔진 생성
-engine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=True,  # 개발용 쿼리 로그 (프로덕션에서는 False)
-    pool_pre_ping=True,  # 연결 유효성 검사
-    pool_size=10,
-    max_overflow=20,
-)
+# 비동기 엔진 생성 (DB별 호환성 고려)
+_db_url = settings.DATABASE_URL
+
+# SQLite는 pool 설정을 지원하지 않음
+engine_kwargs = {
+    "echo": settings.ENVIRONMENT == "development",
+}
+
+# PostgreSQL만 pool 설정 추가
+if "postgresql" in _db_url:
+    engine_kwargs.update({
+        "pool_pre_ping": True,
+        "pool_size": 10,
+        "max_overflow": 20,
+    })
+
+engine = create_async_engine(_db_url, **engine_kwargs)
 
 # 비동기 세션 팩토리
 AsyncSessionLocal = async_sessionmaker(

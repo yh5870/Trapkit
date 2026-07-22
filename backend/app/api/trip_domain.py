@@ -8,7 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies import UserDep
+from interfaces.api.dependencies.auth import get_current_user_id
 from app.application.services.trip_query_service import TripQueryService
 from app.domain.models.trip import Trip
 from app.domain.repositories.trip_repository import TripRepository
@@ -29,13 +29,13 @@ router = APIRouter()
 
 @router.get("", response_model=TripListResponse)
 async def get_user_trips(
-    user: UserDep,
+    user: str = Depends(get_current_user_id),
     trip_repo: TripRepository = Depends(get_trip_repository),
 ) -> TripListResponse:
     """사용자의 모든 Trip 조회.
 
     Args:
-        user: 인증된 사용자
+        user: 인증된 사용자 ID
         trip_repo: Trip Repository (의존성 주입)
 
     Returns:
@@ -46,7 +46,7 @@ async def get_user_trips(
     """
     try:
         query_service = TripQueryService(trip_repo)
-        trips = await query_service.get_user_trips(user.id)
+        trips = await query_service.get_user_trips(user)
 
         trip_responses = [
             TripResponse(
@@ -79,14 +79,14 @@ async def get_user_trips(
 @router.get("/{trip_id}", response_model=TripResponse)
 async def get_trip_by_id(
     trip_id: str,
-    user: UserDep,
+    user: str = Depends(get_current_user_id),
     trip_repo: TripRepository = Depends(get_trip_repository),
 ) -> TripResponse:
     """ID로 Trip 조회.
 
     Args:
         trip_id: Trip ID
-        user: 인증된 사용자
+        user: 인증된 사용자 ID
         trip_repo: Trip Repository (의존성 주입)
 
     Returns:
@@ -106,7 +106,7 @@ async def get_trip_by_id(
             )
 
         # 소유권 확인
-        if trip.user_id != user.id:
+        if trip.user_id != user:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="이 Trip에 접근할 권한이 없습니다.",
@@ -140,14 +140,14 @@ async def get_trip_by_id(
 @router.post("", response_model=TripResponse, status_code=status.HTTP_201_CREATED)
 async def create_trip(
     trip_data: TripCreate,
-    user: UserDep,
+    user: str = Depends(get_current_user_id),
     trip_repo: TripRepository = Depends(get_trip_repository),
 ) -> TripResponse:
     """새 Trip 생성.
 
     Args:
         trip_data: Trip 생성 데이터
-        user: 인증된 사용자
+        user: 인증된 사용자 ID
         trip_repo: Trip Repository (의존성 주입)
 
     Returns:
@@ -162,7 +162,7 @@ async def create_trip(
             title=trip_data.title,
             destination=trip_data.destination,
             purpose=trip_data.purpose,
-            user_id=user.id,
+            user_id=user,
             duration_nights=trip_data.duration_nights,
             departure_month=trip_data.departure_month,
             companions=trip_data.companions,
@@ -206,7 +206,7 @@ async def create_trip(
 async def update_trip(
     trip_id: str,
     trip_data: TripUpdate,
-    user: UserDep,
+    user: str = Depends(get_current_user_id),
     trip_repo: TripRepository = Depends(get_trip_repository),
 ) -> TripResponse:
     """Trip 수정.
@@ -214,7 +214,7 @@ async def update_trip(
     Args:
         trip_id: Trip ID
         trip_data: Trip 수정 데이터
-        user: 인증된 사용자
+        user: 인증된 사용자 ID
         trip_repo: Trip Repository (의존성 주입)
 
     Returns:
@@ -234,7 +234,7 @@ async def update_trip(
             )
 
         # 소유권 확인
-        if trip.user_id != user.id:
+        if trip.user_id != user:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="이 Trip을 수정할 권한이 없습니다.",
@@ -283,14 +283,14 @@ async def update_trip(
 @router.delete("/{trip_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_trip(
     trip_id: str,
-    user: UserDep,
+    user: str = Depends(get_current_user_id),
     trip_repo: TripRepository = Depends(get_trip_repository),
 ) -> None:
     """Trip 삭제.
 
     Args:
         trip_id: Trip ID
-        user: 인증된 사용자
+        user: 인증된 사용자 ID
         trip_repo: Trip Repository (의존성 주입)
 
     Raises:
@@ -307,7 +307,7 @@ async def delete_trip(
             )
 
         # 소유권 확인
-        if trip.user_id != user.id:
+        if trip.user_id != user:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="이 Trip을 삭제할 권한이 없습니다.",
