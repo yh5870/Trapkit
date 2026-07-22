@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, baggage, health, trips
+from app.api import auth, baggage, health, trips, trip_domain
 from app.config import settings
 from app.core.database import init_db, close_db
 from app.utils.logger import setup_logger
@@ -45,6 +45,7 @@ app.add_middleware(
 app.include_router(health.router, prefix="/health", tags=["Health"])
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(trips.router, prefix="/api/trips", tags=["Trips"])
+app.include_router(trip_domain.router, prefix="/api/v1/trips", tags=["Trips V1 (Domain)"])
 app.include_router(baggage.router, prefix="/api/baggage", tags=["Baggage"])
 
 
