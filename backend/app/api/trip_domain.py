@@ -8,7 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies import UserDep
+from app.dependencies import UserDep
 from app.application.services.trip_query_service import TripQueryService
 from app.domain.models.trip import Trip
 from app.domain.repositories.trip_repository import TripRepository

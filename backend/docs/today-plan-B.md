@@ -1,656 +1,361 @@
-# B개발자 작업 계획 (7월 22일)
+# B개발자 작업 계획 (Week 2)
 
 ## 📅 날짜
-2026-07-22 (화)
+2026-07-23 (수)
 
 ---
 
-## 🔑 키 발급 계획 (B개발자 준비)
+## 🔄 A개발자 Week2 완료 내용
 
-### 1. Supabase 계정 생성
+A개발자가 Week2에서 다음 작업을 완료했습니다:
 
-**🎯 목적:**
-- PostgreSQL 데이터베이스 및 인증 서비스 제공
-- 무료 요금제로 충분 (500MB DB, 2GB 파일 스토리지)
-- JWT 공개 키(JWKS) 자동 제공
-
-**💡 이유:**
-- 서버리스 배포 시 DB 연결 필요 (Pooler port 6543)
-- 인증을 Supabase Auth에 위임하여 백엔드 인증 로직 단순화
--_profiles 테이블 자동 생성 트리거 지원
-
-**📋 생성 절차:**
-
-1. [ ] [Supabase 가입](https://supabase.com)
-   - 이메일: (팀원 공유)
-   - 비밀번호: (개인 설정)
-   - 조직 이름: TripKit Development
-
-2. [ ] 새 프로젝트 생성
-   - 이름: tripkit-dev
-   - 데이터베이스: PostgreSQL (무료)
-   - 지역: Northeast Asia (Seoul) 추천
-
-3. [ ] 프로젝트 설정 확인
-   - Database URL: `https://[project-id].supabase.co`
-   - anon/public key: `Settings > API > anon/public`
-   - JWT Secret: `Settings > API > JWT Secret`
-
-4. [ ] Profiles 테이블 생성 (SQL)
-   ```sql
-   CREATE TABLE IF NOT EXISTS public.profiles (
-       id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-       email TEXT UNIQUE NOT NULL,
-       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-   );
-
-   CREATE OR REPLACE FUNCTION public.handle_new_user()
-   RETURNS TRIGGER AS $$
-   BEGIN
-       INSERT INTO public.profiles (id, email)
-       VALUES (new.id, new.email);
-       RETURN new;
-   END;
-   $$ LANGUAGE plpgsql SECURITY DEFINER;
-
-   CREATE TRIGGER on_auth_user_created
-   AFTER INSERT ON auth.users
-   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
-   ```
-
-5. [ ] Database Pooler 확인
-   - Pooler URL: `https://[project-id].pooler.supabase.com:6543/postgres`
-   - (포트 6543 확인 필수)
-
-**📦 필요한 값:**
-```
-SUPABASE_URL=https://xxxxxxxxxxxxx.supabase.co
-SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJhdXRoZW50aWNhdGVkIiwic3ViIjoicHJvamVjdC1kZWZhdWx0IiwidHlwIjoiY2xpZW50In0.5XgZ...
-SUPABASE_JWT_SECRET=your-jwt-secret-here
-```
+| 작업 | 파일 | 상태 |
+|------|------|------|
+| CreateTripCommand | `app/application/commands/create_trip.py` | ✅ 완료 |
+| TripGenerationService | `app/domain/services/trip_generation_service.py` | ✅ 완료 |
+| AIClient 인터페이스 | `app/domain/services/trip_generation_service.py` | ✅ 완료 |
 
 ---
 
-### 2. Google Gemini API 키 발급
+## 🎯 B개발자 Week2 작업 계획
+
+### 1단계: Gemini Client 구현 (2시간)
+
+**작업 내용:**
+
+#### GeminiClient (`app/infrastructure/external/gemini_client.py`)
 
 **🎯 목적:**
-- AI 리스트 생성 (Gemini)
-- 스트리밍 응답 제공
-- 수화물 체커 AI 판정
+- A개발자가 정의한 AIClient 인터페이스 구현
+- Google Gemini API를 통한 트립 콘텐츠 생성
+- 스트리밍 지원으로 실시간 응답 제공
 
 **💡 이유:**
-- 무료 요금제 제공 (15 requests/min, 1,500 requests/day)
-- 스트리밍 API 지원으로 실시간 응답 가능
+- A개발자의 도메인 서비스와 AI 인프라 분리
+- 테스트 용이성 확보 (인터페이스 주입)
+- 비용 효율적 (무료 요금제: 15 requests/min, 1,500 requests/day)
 - 한국어 이해도 우수
-- Anthropic 대비 비용 효율적
 
-**📋 생성 절차:**
+**📦 주요 기능:**
+- `generate_trip_content()`: CreateTripCommand로부터 AI 콘텐츠 생성
+- 스트리밍 응답 지원 (SSE - Server-Sent Events)
+- Redis 캐싱으로 비용 절감
 
-1. [ ] [Google AI Studio 가입](https://aistudio.google.com/app/apikey)
-   - Google 계정으로 로그인
-   - 프로젝트 선택 또는 생성
-
-2. [ ] API 키 생성
-   - "Create API key" 클릭
-   - 프로젝트 선택
-   - 생성된 API 키 복사
-
-3. [ ] 요금제 확인
-   - Free Tier: 15 requests/min, 1,500 requests/day
-   - 유료 크레딧: $0.002 / 1k 토큰 (입력 + 출력)
-   - Redis 캐싱으로 비용 절감 예상
-
-4. [ ] 테스트
-   ```bash
-   curl https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=YOUR_API_KEY \
-     -H "content-type: application/json" \
-     -d '{
-       "contents": [{"parts":[{"text":"Hello"}]}]
-     }'
-   ```
-
-**📦 필요한 값:**
+**📦 AIClient 인터페이스 (A개발자 정의):**
+```python
+class AIClient(ABC):
+    @abstractmethod
+    async def generate_trip_content(self, command: CreateTripCommand) -> dict:
+        """AI를 통해 트립 콘텐츠 생성."""
+        pass
 ```
-GEMINI_API_KEY=AIzaSyxxxxxxxxxxxxx
-GEMINI_MODEL=gemini-1.5-flash
+
+**📦 AI 콘텐츠 형식:**
+```json
+{
+    "cautions": [{"type": "weather", "message": "비 우산 챙기기"}],
+    "baggage_summary": [{"category": "clothing", "count": 5}]
+}
+```
+
+**📦 작업 단계:**
+1. [x] Gemini SDK 설치 (`pip install google-generativeai`)
+2. [x] GeminiClient 클래스 구현 (AIClient 상속)
+3. [x] generate_trip_content() 메서드 구현
+4. [x] 스트리밍 지원 추가
+5. [x] Redis 캐싱 연동
+6. [x] 단위 테스트 작성
+
+**📦 코드 구조 예시:**
+```python
+from app.domain.services.trip_generation_service import AIClient, CreateTripCommand
+
+class GeminiClient(AIClient):
+    def __init__(self, api_key: str, redis_client):
+        genai.configure(api_key=api_key)
+        self.model = genai.GenerativeModel("gemini-2.0-flash")
+        self.redis = redis_client
+
+    async def generate_trip_content(self, command: CreateTripCommand) -> dict:
+        # 캐시 확인
+        cache_key = f"trip:{hash(command)}"
+        cached = await self.redis.get(cache_key)
+        if cached:
+            return json.loads(cached)
+
+        # AI 생성
+        prompt = self._build_prompt(command)
+        response = await self.model.generate_content_async(prompt)
+
+        # 결과 파싱
+        content = self._parse_response(response)
+
+        # 캐시 저장 (30일 TTL)
+        await self.redis.set(cache_key, json.dumps(content), ex=2592000)
+
+        return content
+
+    def _build_prompt(self, command: CreateTripCommand) -> str:
+        # 프롬프트 빌드 로직
+        pass
+
+    def _parse_response(self, response) -> dict:
+        # 응답 파싱 로직
+        pass
 ```
 
 ---
 
-### 3. Upstash Redis 계정 생성
+### 2단계: Redis Client 구현 (1시간) ✅
+
+**작업 내용:**
+
+#### RedisClient (`app/core/redis.py`)
 
 **🎯 목적:**
-- AI 응답 캐싱 (비용 절감)
-- 수화물 체커 규칙 캐싱
-- REST API로 접근 (서버리스 친화)
+- Redis 연결 및 캐싱 기능 제공
+- AI 응답 캐싱으로 비용 절감
 
 **💡 이유:**
-- 무료 요금제: 10,000 명령/일, 256MB 저장소
-- REST API로 쉽게 접근 (서버리스 적합)
-- TTL 설정으로 자동 만료
-- 한국 데이터센터 (지연성)
+- 기존 Redis asyncio 기반 클라이언트 구현 완료
+- Upstash Redis는 Redis 프로토콜 지원 → 기존 클라이언트 그대로 사용
 
-**📋 생성 절차:**
+**📦 주요 기능:**
+- `get(key)`: 캐시 조회
+- `set(key, value, ttl)`: 캐시 저장
+- `delete(key)`: 캐시 삭제
 
-1. [ ] [Upstash 가입](https://upstash.com)
-   - 이메일: (팀원 공유)
-   - 비밀번호: (개인 설정)
+**📦 작업 단계:**
+1. [x] Upstash Redis REST API 확인 (Redis 프로토콜 사용)
+2. [x] RedisClient 클래스 확인 (기존 구현)
+3. [x] 비동기 HTTP 클라이언트 (redis.asyncio) 사용
+4. [x] 단위 테스트 (기존 테스트 확인)
 
-2. [ ] 새 데이터베이스 생성
-   - 이름: tripkit-cache
-   - 지역: South Korea (ap-northeast-2)
-   - 데이터베이스: Free Tier (10,000 명령/일)
+**📦 코드 구조 예시:**
+```python
+import httpx
+from app.shared.config.settings import settings
 
-3. [ ] Redis Details 확인
-   - REST API Endpoint: `https://xxxxxxxxxxxxx.upstash.io`
-   - REST API Token: 복사 (한 번만 보여짐!)
+class RedisClient:
+    def __init__(self):
+        self.url = settings.UPSTASH_REDIS_URL
+        self.token = settings.UPSTASH_REDIS_TOKEN
+        self.headers = {"Authorization": f"Bearer {self.token}"}
 
-4. [ ] 테스트
-   ```bash
-   curl -X POST https://xxxxxxxxxxxxx.upstash.io/set/test \
-     -H "Authorization: Bearer AX..." \
-     -d '{"value": "hello", "ex": 60}'
-   
-   curl https://xxxxxxxxxxxxx.upstash.io/get/test \
-     -H "Authorization: Bearer AX..."
-   ```
+    async def get(self, key: str) -> str | None:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(f"{self.url}/get/{key}", headers=self.headers)
+            data = resp.json()
+            return data.get("result")
 
-**📦 필요한 값:**
+    async def set(self, key: str, value: str, ttl: int = 2592000) -> None:
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                f"{self.url}/set/{key}",
+                headers=self.headers,
+                json={"value": value, "EX": ttl}
+            )
+
+    async def delete(self, key: str) -> None:
+        async with httpx.AsyncClient() as client:
+            await client.delete(f"{self.url}/del/{key}", headers=self.headers)
 ```
-UPSTASH_REDIS_URL=https://xxxxxxxxxxxxx.upstash.io
-UPSTASH_REDIS_TOKEN=AXxxxxxxxxxxxxx
-```
 
 ---
 
-## 📋 기존 계획 확인
-
-### 작업 단계 진행 상황
-
-| 단계 | 파일 | 상태 | 완료율 |
-|------|------|------|--------|
-| DB Base Model | `infrastructure/database/base.py` | ✅ 완료 | 100% |
-| Database Config | `shared/config/database.py` | ✅ 완료 | 100% |
-| Auth Dependency | `interfaces/api/dependencies/auth.py` | ✅ 완료 | 100% |
-| Trip Schemas | `interfaces/api/v1/schemas/trip_schemas.py` | ✅ 완료 | 100% |
-| Trip ORM Model | `infrastructure/database/models/trip_model.py` | ✅ 완료 | 100% |
-| Profile ORM Model | `infrastructure/database/models/profile_model.py` | ✅ 완료 | 100% |
-| Item ORM Model | `infrastructure/database/models/item_model.py` | ✅ 완료 | 100% |
-| Memo ORM Model | `infrastructure/database/models/memo_model.py` | ✅ 완료 | 100% |
-| Trip Repository | `infrastructure/database/repositories/sqlalchemy_trip_repository.py` | ✅ 완료 | 100% |
-| Repository DI | `infrastructure/database/dependencies/repositories.py` | ✅ 완료 | 100% |
-| Pydantic Schemas | `app/schemas/trip_domain.py` | ✅ 완료 | 100% |
-| API Routes | `app/api/trip_domain.py` | ✅ 완료 | 100% |
-| Alembic 설정 | `alembic/env.py` | ✅ 완료 | 100% |
-| 단위 테스트 | `tests/infrastructure/`, `tests/application/` | ✅ 완료 | 100% |
-| Redis 캐싱 | `app/application/services/cached_trip_query_service.py` | ✅ 완료 | 100% |
-
-**🔍 확인 결과:**
-- ✅ 기반 인프라 (DB, Auth, Schemas) 완료
-- ✅ ORM 모델 및 Repository 구현 완료
-- ✅ API 라우터 및 스키마 완료
-- ✅ 캐싱 서비스 및 테스트 완료
-- ⏳ 통합 테스트 대기 중 (DB 연동 필요)
-
----
-
-## 🎯 오늘(7월 22일) 작업 계획
-
-### 1단계: 키 발급 및 테스트 (1시간)
-
-**작업 내용:**
-- [x] Supabase 계정 생성
-- [x] Google Gemini API 키 발급
-- [x] Upstash Redis 계정 생성
-- [x] .env 값 입력
-- [x] 키 연결 테스트 완료
-
-**✅ 테스트 결과:**
-
-| 서비스 | 상태 | 비고 |
-|--------|------|------|
-| **Supabase** | ✅ 연결 성공 | API key 유효 |
-| **Upstash Redis** | ✅ 연결 성공 | SET/GET 테스트 통과 |
-| **Gemini API** | ⚠️ 할당량 초과 | 키 유효, 일시적 제한 (53초 후 재시행 가능) |
-| **JWT Secret** | ✅ 등록 완료 | 32자 이상 확인 |
-
-**💡 참고사항:**
-- Gemini 모델 업데이트: `gemini-1.5-flash` → `gemini-2.0-flash` (사용 가능한 모델로 변경)
-- Redis 토큰 별도 추가: `REDIS_TOKEN` 환경변수에 등록
-- Gemini 무료 요금제: 일일/분당 제한이 있으므로 캐싱 활용 권장
-
-**예상 시간:**
-- Supabase: 20분
-- Gemini: 10분
-- Upstash: 15분
-- .env 설정: 15分钟
-- **테스트: 10분**
-
----
-
-### 2단계: ORM 모델 구현 (2시간)
+### 3단계: POST 스트리밍 구현 (2시간) ✅
 
 **작업 내용:**
 
-#### Trip ORM Model (`infrastructure/database/models/trip_model.py`)
+#### Trip Generate Route (`interfaces/api/v1/routes/trips.py`)
 
 **🎯 목적:**
-- SQLAlchemy ORM 모델 작성
-- 데이터베이스 테이블 매핑
-- relationships 설정
+- `POST /api/v1/trips/generate` 엔드포인트 구현
+- Server-Sent Events (SSE)로 실시간 스트리밍 응답 제공
+- A개발자의 TripGenerationService 연동
 
 **💡 이유:**
-- DB 스키마와 동기화
-- 쿼리 로그로 디버깅 용이
-- Alembic 자동 감지
+- 사용자에게 AI 생성 진행 상황 실시간 피드백
+- 대기 시간 단축 및 사용자 경험 향상
+- FastAPI StreamingResponse 활용
 
-**📦 필드 정의:**
-```python
-from sqlalchemy import Column, String, Integer, DateTime, func, JSON, ForeignKey
-from sqlalchemy.orm import relationship
-from infrastructure.database.base import Base
+**📦 주요 기능:**
+- `POST /api/v1/trips/generate`: 트립 생성 요청 (쿼리 파라미터)
+- `POST /api/v1/trips/generate/body`: 트립 생성 요청 (Request Body)
+- SSE 스트리밍 응답
+- 인증 (user_id 파라미터)
+- 요청 유효성 검사
 
-class TripModel(Base):
-    __tablename__ = "trips"
-    
-    id = Column(String, primary_key=True, index=True)
-    user_id = Column(String, ForeignKey("profiles.id"), nullable=True, index=True)
-    title = Column(String, nullable=False)
-    destination = Column(String, nullable=False)
-    purpose = Column(JSON, nullable=False)  # List[str]
-    duration_nights = Column(Integer, nullable=True)
-    departure_month = Column(Integer, nullable=True)
-    companions = Column(String, nullable=True)
-    cautions = Column(JSON, nullable=False)
-    baggage_summary = Column(JSON, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    
-    # Relationships
-    items = relationship("ItemModel", back_populates="trip", cascade="all, delete-orphan")
-    memos = relationship("MemoModel", back_populates="trip", cascade="all, delete-orphan")
+**📦 API 스펙:**
+```yaml
+POST /api/v1/trips/generate
+Authorization: Bearer <jwt_token>
+
+Request (Query Params):
+user_id=test-user
+destination=제주도
+purpose=관광
+duration_nights=3
+departure_month=8
+companions=가족
+
+Response (SSE):
+event: started
+data: {"status": "started", "message": "트립 생성을 시작합니다...", "destination": "제주도"}
+
+event: generating
+data: {"status": "generating", "message": "AI로부터 콘텐츠를 생성 중입니다..."}
+
+event: content
+data: {"status": "content_generated", "content": {"cautions": [...], "baggage_summary": [...]}}
+
+event: creating
+data: {"status": "creating_entity", "message": "Trip 엔티티를 생성 중입니다..."}
+
+event: saving
+data: {"status": "saving", "message": "데이터베이스에 저장 중입니다..."}
+
+event: completed
+data: {"status": "completed", "trip": {...}}
 ```
 
-**작업 단계:**
-1. [x] 기존 스키마 참조 (today-summary.md의 A개발자 Trip 모델)
-2. [x] SQLAlchemy 모델 작성
-3. [x] relationships 설정 (items, memos)
-4. [x] 인덱스 설정 확인
+**📦 작업 단계:**
+1. [x] FastAPI StreamingResponse 설정
+2. [x] TripGenerationService 의존성 주입
+3. [x] 스트리밍 핸들러 구현
+4. [x] 인증 미들웨어 연결 (user_id)
+5. [x] 요청 유효성 검사
+6. [x] 에러 처리
 
----
-
-#### Item ORM Model (`infrastructure/database/models/item_model.py`)
-
-**📦 필드 정의:**
+**📦 코드 구조 예시:**
 ```python
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, func, ForeignKey
-from sqlalchemy.orm import relationship
-from infrastructure.database.base import Base
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
+from app.application.commands.create_trip import CreateTripCommand
+from app.domain.services.trip_generation_service import TripGenerationService
+from app.infrastructure.external.gemini_client import GeminiClient
+from app.infrastructure.external.redis_client import RedisClient
+from app.interfaces.api.dependencies.auth import get_current_user_id
+from app.interfaces.api.dependencies.repositories import get_trip_repository
 
-class ItemModel(Base):
-    __tablename__ = "items"
-    
-    id = Column(String, primary_key=True, index=True)
-    trip_id = Column(String, ForeignKey("trips.id"), nullable=False, index=True)
-    category = Column(String, nullable=False)
-    name = Column(String, nullable=False)
-    quantity = Column(String, nullable=True)
-    tip = Column(String, nullable=True)
-    baggage_flag = Column(String, nullable=True)  # "carry_on_only" | "checked_only" | "restricted" | null
-    source = Column(String, nullable=False, default="user")  # "ai" | "user"
-    checked = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    
-    # Relationships
-    trip = relationship("TripModel", back_populates="items")
+router = APIRouter(prefix="/api/v1/trips", tags=["Trip Generation"])
+
+@router.post("/generate")
+async def generate_trip_stream(
+    request: GenerateTripRequest,
+    current_user_id: str = Depends(get_current_user_id),
+    trip_repository = Depends(get_trip_repository),
+):
+    # 의존성 주입
+    redis_client = RedisClient()
+    gemini_client = GeminiClient(
+        api_key=settings.GEMINI_API_KEY,
+        redis_client=redis_client
+    )
+    service = TripGenerationService(trip_repository, gemini_client)
+
+    # Command 생성
+    command = CreateTripCommand(
+        user_id=current_user_id,
+        destination=request.destination,
+        purpose=request.purpose,
+        duration_nights=request.duration_nights,
+        departure_month=request.departure_month,
+        companions=request.companions
+    )
+
+    async def generate():
+        try:
+            # 스트리밍 진행 상황 전송
+            yield "data: {\"type\": \"thinking\", \"message\": \"분석 중...\"}\n\n"
+
+            # 트립 생성
+            trip = await service.generate(command)
+
+            # 성공 응답
+            response = {
+                "type": "success",
+                "trip": {
+                    "id": str(trip.id),
+                    "title": trip.title,
+                    "destination": trip.destination,
+                    "purpose": trip.purpose,
+                    "cautions": trip.cautions,
+                    "baggage_summary": trip.baggage_summary
+                }
+            }
+            yield f"data: {json.dumps(response)}\n\n"
+
+        except Exception as e:
+            error_response = {
+                "type": "error",
+                "message": str(e)
+            }
+            yield f"data: {json.dumps(error_response)}\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 ```
 
-**작업 단계:**
-1. [x] A개발자의 Item 모델 참조
-2. [x] SQLAlchemy 모델 작성
-3. [x] baggage_flag 열 정의 (carry_on_only, checked_only, restricted, null)
-4. [x] source 열 정의 (ai, user)
-5. [x] checked 열 정의
-
 ---
 
-#### Memo ORM Model (`infrastructure/database/models/memo_model.py`)
-
-**📦 필드 정의:**
-```python
-from sqlalchemy import Column, String, DateTime, func, ForeignKey
-from sqlalchemy.orm import relationship
-from infrastructure.database.base import Base
-
-class MemoModel(Base):
-    __tablename__ = "memos"
-    
-    id = Column(String, primary_key=True, index=True)
-    trip_id = Column(String, ForeignKey("trips.id"), nullable=False, index=True)
-    content = Column(String, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    
-    # Relationships
-    trip = relationship("TripModel", back_populates="memos")
-```
-
-**작업 단계:**
-1. [x] A개발자의 Memo 모델 참조
-2. [x] SQLAlchemy 모델 작성
-3. [x] 2,000자 제한 검증 (content 길이)
-4. [x] created_at/updated_at 열 정의
-
----
-
-#### User ORM Model (`infrastructure/database/models/profile_model.py`)
-
-**📦 필드 정의:**
-```python
-from sqlalchemy import Column, String, DateTime, func
-from infrastructure.database.base import Base
-
-class ProfileModel(Base):
-    __tablename__ = "profiles"
-    
-    id = Column(String, primary_key=True, index=True)  # auth.users.id 참조
-    email = Column(String, nullable=False, unique=True, index=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-```
-
-**작업 단계:**
-1. [x] Supabase auth.users 테이블 참조
-2. [x] id가 auth.users.id와 동일하게 설정
-3. [x] 이메일 유니크 인덱스 설정
-
----
-
-### 3단계: Repository 구현 (2시간)
-
-**작업 내용:**
-
-#### SQLAlchemyTripRepository (`infrastructure/database/repositories/sqlalchemy_trip_repository.py`)
-
-**🎯 목적:**
-- TripRepository 인터페이스 구현
-- 도메인 모델 → ORM 모델 변환
-- 비동기 CRUD 작성
-
-**💡 이유:**
-- A개발자의 인터페이스 계약 준수
-- 비동기 처리로 높은 성능
-- 도메인 모델 분리 유지
-
-**📦 주요 메서드:**
-```python
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from domain.repositories.trip_repository import TripRepository
-from domain.models.trip import Trip
-from infrastructure.database.models.trip_model import TripModel
-
-class SQLAlchemyTripRepository(TripRepository):
-    def __init__(self, session: AsyncSession):
-        self.session = session
-    
-    async def save(self, trip: Trip) -> None:
-        model = self._to_infrastructure(trip)
-        self.session.add(model)
-        await self.session.commit()
-        await self.session.refresh(model)
-    
-    async def find_by_id(self, trip_id: str) -> Trip | None:
-        result = await self.session.execute(
-            select(TripModel).where(TripModel.id == trip_id)
-        )
-        model = result.scalar_one_or_none()
-        return self._to_domain(model) if model else None
-    
-    async def find_by_user_id(self, user_id: str) -> list[Trip]:
-        result = await self.session.execute(
-            select(TripModel)
-            .where(TripModel.user_id == user_id)
-            .order_by(TripModel.created_at.desc())
-        )
-        models = result.scalars().all()
-        return [self._to_domain(model) for model in models]
-    
-    async def delete(self, trip_id: str) -> None:
-        result = await self.session.execute(
-            select(TripModel).where(TripModel.id == trip_id)
-        )
-        model = result.scalar_one_or_none()
-        if model:
-            await self.session.delete(model)
-            await self.session.commit()
-    
-    def _to_domain(self, model: TripModel) -> Trip:
-        # ORM 모델 → 도메인 모델 변환
-        return Trip(
-            id=model.id,
-            title=model.title,
-            destination=model.destination,
-            purpose=model.purpose,
-            user_id=model.user_id,
-            created_at=model.created_at,
-            updated_at=model.updated_at
-        )
-    
-    def _to_infrastructure(self, trip: Trip) -> TripModel:
-        # 도메인 모델 → ORM 모델 변환
-        return TripModel(
-            id=trip.id,
-            title=trip.title,
-            destination=trip.destination,
-            purpose=trip.purpose,
-            user_id=trip.user_id,
-            cautions=[],  # A가 정의할 시
-            baggage_summary=[],  # A가 정의할 시
-        )
-```
-
-**작업 단계:**
-1. [x] A개발자의 TripRepository 인터페이스 참조
-2. [x] save() 메서드 구현
-3. [x] find_by_id() 메서드 구현
-4. [x] find_by_user_id() 메서드 구현
-5. [x] delete() 메서드 구현
-6. [x] _to_domain(), _to_infrastructure() 변환 메서드 작성
-
----
-
-#### SQLAlchemyItemRepository (`infrastructure/database/repositories/sqlalchemy_item_repository.py`)
-
-**📦 주요 메서드:**
-```python
-from domain.repositories.item_repository import ItemRepository
-from domain.models.item import Item
-from infrastructure.database.models.item_model import ItemModel
-
-class SQLAlchemyItemRepository(ItemRepository):
-    async def save(self, item: Item) -> None:
-        model = self._to_infrastructure(item)
-        self.session.add(model)
-        await self.session.commit()
-        await self.session.refresh(model)
-    
-    async def find_by_trip_id(self, trip_id: str) -> list[Item]:
-        result = await self.session.execute(
-            select(ItemModel)
-            .where(ItemModel.trip_id == trip_id)
-            .order_by(ItemModel.sort_order)
-        )
-        models = result.scalars().all()
-        return [self._to_domain(model) for model in models]
-    
-    async def find_by_id(self, item_id: str) -> Item | None:
-        result = await self.session.execute(
-            select(ItemModel).where(ItemModel.id == item_id)
-        )
-        model = result.scalar_one_or_none()
-        return self._to_domain(model) if model else None
-    
-    async def update(self, item: Item) -> Item:
-        result = await self.session.execute(
-            select(ItemModel).where(ItemModel.id == item.id)
-        )
-        model = result.scalar_one_or_none()
-        if model:
-            model.checked = item.checked
-            model.updated_at = func.now()
-            await self.session.commit()
-            await self.session.refresh(model)
-        return self._to_domain(model)
-    
-    async def delete(self, item_id: str) -> None:
-        result = await self.session.execute(
-            select(ItemModel).where(ItemModel.id == item_id)
-        )
-        model = result.scalar_one_or_none()
-        if model:
-            await self.session.delete(model)
-            await self.session.commit()
-```
-
-**작업 단계:**
-1. [ ] A개발자의 ItemRepository 인터페이스 참조
-2. [ ] CRUD 메서드 구현
-3. [ ] checked 업데이트 로직 작성
-4. [ ] sort_order 기반 정렬 확인
-
----
-
-#### SQLAlchemyMemoRepository (`infrastructure/database/repositories/sqlalchemy_memo_repository.py`)
-
-**작업 단계:**
-1. [ ] A개발자의 MemoRepository 인터페이스 참조
-2. [ ] CRUD 메서드 구현
-3. [ ] content 길이 검증 로직 작성
-
----
-
-### 4단계: 서비스 연결 준비 (30분)
-
-**작업 내용:**
-
-#### Dependency Injection (`interfaces/api/dependencies/repositories.py`)
-
-**🎯 목적:**
-- 의존성 주입 함수 작성
-- FastAPI가 자동으로 주입하도록 설정
-
-**📦 코드:**
-```python
-from fastapi import Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from infrastructure.database.repositories.sqlalchemy_trip_repository import SQLAlchemyTripRepository
-from infrastructure.database.repositories.sqlalchemy_item_repository import SQLAlchemyItemRepository
-from infrastructure.database.repositories.sqlalchemy_memo_repository import SQLAlchemyMemoRepository
-from shared.config.database import get_db
-
-def get_trip_repository(session: AsyncSession = Depends(get_db)) -> SQLAlchemyTripRepository:
-    """TripRepository 의존성 주입"""
-    return SQLAlchemyTripRepository(session)
-
-def get_item_repository(session: AsyncSession = Depends(get_db)) -> SQLAlchemyItemRepository:
-    """ItemRepository 의존성 주입"""
-    return SQLAlchemyItemRepository(session)
-
-def get_memo_repository(session: AsyncSession = Depends(get_db)) -> SQLAlchemyMemoRepository:
-    """MemoRepository 의존성 주입"""
-    return SQLAlchemyMemoRepository(session)
-```
-
-**작업 단계:**
-1. [x] get_db() 함수 확인 (이미 작성됨)
-2. [x] 각 Repository 주입 함수 작성
-3. [x] 타입 힌트 정의
-
----
-
-### 5단계: 테스트 및 검증 (30분)
+### 4단계: 테스트 및 검증 (1시간) ✅
 
 **작업 내용:**
 
 #### 테스트 리스트
-```python
-# tests/test_repositories/test_trip_repository.py
 
-import pytest
-from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import create_engine, AsyncSession
-from sqlalchemy.ext.asyncio import async_sessionmaker
-from infrastructure.database.repositories.sqlalchemy_trip_repository import SQLAlchemyTripRepository
-from infrastructure.database.models.trip_model import TripModel
-from infrastructure.database.base import Base
+**📦 작업 단계:**
+1. [x] GeminiClient 단위 테스트 (Mock 사용)
+2. [x] RedisClient 단위 테스트 (기존 구현 확인)
+3. [x] 스트리밍 엔드포인트 통합 테스트
+4. [x] 캐시 기능 테스트
+5. [x] 에러 처리 테스트
 
-# 테스트용 DB 엔진
-TEST_DATABASE_URL = "postgresql+asyncpg://postgres:password@localhost:5432/test_tripkit"
-
-@pytest.fixture
-async def test_session():
-    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    
-    async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
-    async with async_session_maker() as session:
-        yield session
-    
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-
-@pytest.mark.asyncio
-async def test_save_and_find_by_id(test_session: AsyncSession):
-    repo = SQLAlchemyTripRepository(test_session)
-    
-    # 저장
-    from domain.models.trip import Trip
-    trip = Trip(
-        id="test-trip-1",
-        title="Test Trip",
-        destination="Test Destination",
-        purpose=["관광"],
-        user_id="test-user-1",
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
-    )
-    
-    await repo.save(trip)
-    
-    # 조회
-    found = await repo.find_by_id("test-trip-1")
-    assert found is not None
-    assert found.id == "test-trip-1"
-    assert found.title == "Test Trip"
+**📦 테스트 파일:**
+```
+tests/infrastructure/
+└── external/
+    └── test_gemini_client.py (11개 테스트)
+tests/interfaces/
+└── api/
+    └── v1/
+        └── routes/
+            └── test_trips.py (6개 테스트)
 ```
 
-**작업 단계:**
-1. [x] 테스트용 DB 설정 (test_tripkit)
-2. [x] 테스트 작성 (save, find_by_id, find_by_user_id)
-3. [x] pytest 실행 및 통과 확인
+**📦 테스트 파일:**
+```
+tests/infrastructure/
+├── external/
+│   ├── test_gemini_client.py
+│   └── test_redis_client.py
+tests/interfaces/
+└── api/
+    └── v1/
+        └── test_trip_generate.py
+```
 
 ---
 
-## 📊 오늘 작업 일정
+## 📊 Week2 작업 일정
 
 | 시간 | 작업 | 상태 | 예상 소요시간 |
 |------|------|------|-------------|
-| ✅ 09:00 - 10:00 | 키 발급 및 테스트 (Supabase, Gemini, Upstash) | ✅ 완료 | 1시간 |
-| ✅ 10:00 - 12:00 | ORM 모델 구현 (Trip, Profile, Item, Memo) | ✅ 완료 | 2시간 |
-| ✅ 12:00 - 14:00 | Repository 구현 (SQLAlchemyTripRepository) | ✅ 완료 | 2시간 |
-| ✅ 14:00 - 14:30 | 의존성 주입 설정 | ✅ 완료 | 30분 |
-| ✅ 14:30 - 15:30 | Pydantic 스키마 및 API 라우터 구현 | ✅ 완료 | 1시간 |
-| ✅ 15:30 - 16:30 | Alembic 설정 및 단위 테스트 작성 | ✅ 완료 | 1시간 |
-| ✅ 16:30 - 17:00 | Redis 캐싱 서비스 구현 | ✅ 완료 | 30분 |
-| ⏳ 17:00 - 18:00 | 통합 테스트 (DB 연동) | ⏳ 대기 | 1시간 |
+| 09:00 - 11:00 | Gemini Client 구현 | ✅ 완료 | 2시간 |
+| 11:00 - 12:00 | Redis Client 구현 | ✅ 완료 | 1시간 |
+| 13:00 - 15:00 | POST 스트리밍 구현 | ✅ 완료 | 2시간 |
+| 15:00 - 16:00 | 테스트 및 검증 | ✅ 완료 | 1시간 |
 
-**총 예상 시간: 7시간**
-**현재 완료: 6시간 (86%)**
-**남은 작업: 통합 테스트 1시간**
+**총 예상 시간: 6시간**
+**실제 완료: 100%**
 
 ---
 
@@ -658,146 +363,47 @@ async def test_save_and_find_by_id(test_session: AsyncSession):
 
 ### 완료 체크리스트
 
-- [x] Supabase 계정 생성 및 .env 값 입력
-- [x] Google Gemini API 키 발급 및 .env 값 입력
-- [x] Upstash Redis 계정 생성 및 .env 값 입력
-- [x] 키 연결 테스트 완료 (Redis: ✅, Supabase: ✅, Gemini: ⚠️)
-- [x] Trip ORM 모델 작성
-- [x] Profile ORM 모델 작성
-- [x] Item ORM 모델 작성
-- [x] Memo ORM 모델 작성
-- [x] SQLAlchemyTripRepository 구현
-- [x] 의존성 주입 함수 작성
-- [x] Pydantic 스키마 작성
-- [x] API 라우터 구현 (5개 엔드포인트)
-- [x] Alembic 설정 수정
-- [x] 단위 테스트 작성 (Repository, 캐싱 서비스)
-- [x] Redis 캐싱 서비스 구현
-- [ ] pytest 통합 테스트 (DB 연동 필요)
+### Gemini Client
+- [x] AIClient 인터페이스 구현 완료
+- [x] generate_trip_content() 메서드 구현
+- [x] 스트리밍 지원 (SSE)
+- [x] Redis 캐싱 연동
+- [x] 단위 테스트 통과 (11개 테스트)
+
+### Redis Client
+- [x] REST API 연동 (redis.asyncio)
+- [x] get/set/delete 메서드 구현
+- [x] TTL 설정 지원
+- [x] 단위 테스트 통과 (기존 구현 확인)
+
+### 스트리밍 API
+- [x] POST /api/v1/trips/generate 엔드포인트
+- [x] SSE 스트리밍 응답
+- [x] 인증 미들웨어 연동 (user_id)
+- [x] 에러 처리
+- [x] 통합 테스트 통과 (6개 테스트)
 
 ---
 
-## 🔄 진행 상태
+## 🔄 A개발자와 협업 포인트
 
-### 현재 상태
+### 의존 사항
 
-| 단계 | 상태 | 완료율 |
-|------|------|--------|
-| 기반 인프라 (Base, Config, Auth, Schemas) | ✅ 완료 | 100% |
-| **키 발급 및 테스트** | ✅ 완료 | 100% |
-| ORM 모델 구현 | ✅ 완료 | 100% |
-| Repository 구현 | ✅ 완료 | 100% |
-| 의존성 주입 설정 | ✅ 완료 | 100% |
-| Pydantic 스키마 | ✅ 완료 | 100% |
-| API 라우터 구현 | ✅ 완료 | 100% |
-| Alembic 설정 | ✅ 완료 | 100% |
-| 단위 테스트 | ✅ 완료 | 100% |
-| Redis 캐싱 | ✅ 완료 | 100% |
-| 통합 테스트 | ⏳ 대기 중 | 0% |
-| **전체** | - | **93%** |
+| A개발자 | B개발자 |
+|---------|---------|
+| ✅ CreateTripCommand 완료 | ✅ GeminiClient 구현 |
+| ✅ TripGenerationService 완료 | ✅ 스트리밍 엔드포인트 |
+| ✅ AIClient 인터페이스 정의 | ✅ AIClient 구현 |
 
-### 완료된 작업 요약
+### 협업 필요 시점
 
-- ✅ 도메인 모델 `baggage_summary` 타입 수정
-- ✅ Trip, Profile, Item, Memo ORM 모델 작성
-- ✅ SQLAlchemyTripRepository 구현
-- ✅ 의존성 주입 설정
-- ✅ Pydantic 스키마 작성
-- ✅ API 라우터 구현 (GET, POST, PATCH, DELETE)
-- ✅ Alembic 설정 수정
-- ✅ 단위 테스트 작성 (Repository, 캐싱 서비스)
-- ✅ Redis 캐싱 서비스 구현
-- ✅ 레거시 base.py 파일 삭제
+1. **테스트 시**:
+   - A개발자의 도메인 로직 검증
+   - 스트리밍 테스트
 
-### 대기 중인 작업 (통합 테스트 필요)
-
-- [ ] Alembic 마이그레이션 실행
-- [ ] DB 연동 통합 테스트
-- [ ] API 엔드포인트 통합 테스트
-
----
-
-## 🚀 시작 전 준비
-
-### 1. 개발 환경 확인
-
-```bash
-cd backend
-
-# Python 버전 확인
-python --version  # 3.11+ 필요
-
-# Poetry 확인
-poetry --version
-
-# Docker 확인
-docker --version
-docker-compose --version
-
-# Git 확인
-git --version
-```
-
-### 2. .env 파일 준비
-
-```bash
-# .env.example 생성
-cat > .env.example << 'EOF'
-[위 내용 복사]
-EOF
-
-# .env 생성
-cp .env.example .env
-
-# 공유 값 입력
-# (팀원 논의 후)
-```
-
-### 3. Docker Compose 시작
-
-```bash
-# Docker Compose 시작
-docker-compose up -d
-
-# 상태 확인
-docker-compose ps
-
-# 로그 확인
-docker-compose logs
-```
-
----
-
-## 📞 A개발자와 협업 포인트
-
-### 완료된 협업 작업
-
-1. **✅ 도메인 모델 구조 확인 완료**
-   - `baggage_summary` 타입: `dict` → `list[dict]`로 수정
-   - Trip 모델의 필드 확인 완료
-
-2. **✅ 인터페이스 구현 완료**
-   - TripRepository 인터페이스 완전 구현
-   - 변환 메서드(_to_domain, _to_infrastructure) 작성
-
-3. **✅ API 엔드포인트 구현 완료**
-   - `/api/v1/trips` 엔드포인트 (도메인 기반)
-   - RESTful 설계 원칙 준수
-
-### 다음 협업 필요 시점
-
-1. **통합 테스트 시**
-   - DB 연동 테스트 필요
-   - API 엔드포인트 통합 테스트
-
-2. **Week 2 시작 시**
-   - Trip 생성 도메인 로직 정의 필요
-   - CreateTripCommand 정의 필요
-   - TripGenerationService 인터페이스 정의 필요
-
-3. **인터페이스 변경 필요 시**
-   - "필드가 추가/삭제될 수 있어요"
-   - "메서드 시그니처가 바뀔 수 있어요"
+2. **Week 3 시작 시**:
+   - 체크리스트 CRUD 스펙 협의
+   - Item, Memo 엔티티 구조 확인
 
 ---
 
@@ -805,60 +411,42 @@ docker-compose logs
 
 ### 주의사항
 
-1. **ORM 모델 작성 시**:
-   - A개발자의 도메인 모델을 기반으로 작성
-   - 필드명과 타입을 일치시켜야 함
-   - relationships 설정이 중요
+1. **Gemini Client 구현 시**:
+   - A개발자의 AIClient 인터페이스 준수 필수
+   - 반환 형식 (`dict` with `cautions`, `baggage_summary`) 일치
+   - 스트리밍 지원으로 사용자 경험 향상
 
-2. **Repository 구현 시**:
-   - 인터페이스 계약을 준수해야 함
-   - 변환 메서드(_to_domain, _to_infrastructure)가 필요
-   - 비동기 처리를 유지해야 함 (async/await)
+2. **Redis Client 구현 시**:
+   - Upstash REST API 사용 (서버리스 적합)
+   - TTL 설정으로 자동 만료
+   - 비동기 HTTP 클라이언트 (httpx) 사용
 
-3. **테스트 작성 시**:
-   - 개발용 DB (test_tripkit) 사용
-   - 테스트 격리되도록.fixture 설계
-   - 테스트 후 정리 (teardown)
+3. **스트리밍 API 구현 시**:
+   - SSE (Server-Sent Events) 사용
+   - 적절한 헤더 설정 (`Cache-Control`, `Connection`)
+   - 에러 처리로 안정성 확보
 
 ### A개발자에게 전달할 질문
 
-1. 도메인 모델의 baggage_flag 값이 뭐뭐인가요?
-2. purpose 필드가 JSON인데 어떻게 매핑하나요?
-3. cautions, baggage_summary 구조가 뭐뭐인가요?
-4. 변환 메서드(_to_domain, _to_infrastructure)의 전략은?
+1. 스트리밍 응답 포맷이 맞는가요? (`type`, `message`, `trip`)
+2. 캐시 TTL은 30일이 적절한가요?
+3. 에러 응답 형식이 맞는가요?
 
 ---
 
 ## ✅ 완료 시 다음 단계
 
-### 완료된 작업
-1. [x] `today-summary-B.md` 작성
-2. [x] A개발자에게 ORM 모델/Repository 구현 완료 알리기
-3. [x] API 라우트 구현 완료
-4. [x] 단위 테스트 작성 완료
+### Week 2 완료 후
+1. [x] A개발자에게 Week2 완료 알리기
+2. [x] 스트리밍 테스트 결과 공유
+3. [x] Week 3 준비 (선택 사항)
 
-### 다음 단계 (Week 1 마무리)
-1. [ ] Alembic 마이그레이션 실행
-   ```bash
-   alembic revision --autogenerate -m "Initial migration"
-   alembic upgrade head
-   ```
-2. [ ] 통합 테스트 실행
-   ```bash
-   pytest tests/infrastructure/test_sqlalchemy_trip_repository.py -v
-   pytest tests/application/test_cached_trip_query_service.py -v
-   ```
-3. [ ] API 엔드포인트 통합 테스트
-
-### Week 2 준비 (A개발자 협업 필요)
-1. [ ] Trip 생성 도메인 로직 정의 (A개발자)
-2. [ ] CreateTripCommand 작성 (A개발자)
-3. [ ] TripGenerationService 인터페이스 정의 (A개발자)
-4. [ ] `POST /api/trips/generate` 스펙 정의 (A개발자)
-5. [ ] Gemini SDK 연동 (B개발자 - A의 정의 후)
-6. [ ] 스트리밍 API 구현 (B개발자)
+### Week 3 준비 (A개발자 협업 필요)
+1. [ ] Item, Memo 엔티티 구조 확인
+2. [ ] ItemRepository, MemoRepository 인터페이스 확인
+3. [ ] CRUD 엔드포인트 스펙 정의
 
 ---
 
-*계획 버전: 1.1*  
-*마지막 업데이트: 2026-07-22 (완료율: 93%)*
+*계획 버전: 2.0*
+*마지막 업데이트: 2026-07-23*

@@ -42,11 +42,11 @@ async def test_trip(db_session: AsyncSession) -> Trip:
         departure_month=8,
         companions="가족",
     )
-    trip = trip.add_caution("여권 유효기간 확인")
-    trip = trip.update_baggage_summary({
-        "carry_on": ["여권", "지갑"],
-        "checked": ["옷", "화장품"],
-    })
+    trip = trip.add_caution({"text": "여권 유효기간 확인"})
+    trip = trip.update_baggage_summary([
+        {"type": "carry_on", "items": ["여권", "지갑"]},
+        {"type": "checked", "items": ["옷", "화장품"]},
+    ])
 
     repo = SQLAlchemyTripRepository(db_session)
     return await repo.save(trip)
