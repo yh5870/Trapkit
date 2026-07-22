@@ -21,7 +21,7 @@ class Trip:
     departure_month: int | None = None
     companions: str | None = None
     cautions: list[dict] = field(default_factory=list)
-    baggage_summary: dict = field(default_factory=dict)
+    baggage_summary: list[dict] = field(default_factory=list)
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)
 
@@ -81,6 +81,6 @@ class Trip:
         new_cautions.append(caution)
         return self.update(cautions=new_cautions)
 
-    def update_baggage_summary(self, summary: dict) -> Self:
+    def update_baggage_summary(self, summary: list[dict]) -> Self:
         """수화물 요약 업데이트."""
         return self.update(baggage_summary=summary)

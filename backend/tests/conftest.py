@@ -9,8 +9,14 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.main import app
-from app.core.database import get_db
-from app.models.user import User
+from shared.config.database import get_db
+
+# 모든 ORM 모델 import (테스트 DB에 테이블 생성용)
+import infrastructure.database.models.item_model
+import infrastructure.database.models.memo_model
+import infrastructure.database.models.profile_model
+import infrastructure.database.models.trip_model
+from shared.config.database import Base
 
 
 # 테스트용 DB 엔진
@@ -52,8 +58,16 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
 @pytest.fixture
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
     """테스트용 DB 세션."""
+    # 테이블 생성
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
     async with async_session_maker() as session:
         yield session
+
+    # 테이블 정리
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
 
 
 @pytest.fixture
