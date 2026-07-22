@@ -1,0 +1,82 @@
+requirements.txt만 사용하는 설정 (venv 방식)
+1️⃣ 초기 설정 (한 번만)
+
+# 1. 가상환경 생성
+python -m venv venv
+
+# 2. 가상환경 활성화
+# Windows:
+venv\Scripts\activate
+
+# 3. 의존성 설치
+pip install -r requirements.txt
+
+# 4. Docker 컨테이너 실행 (DB, Redis)
+docker-compose up -d
+
+# 5. Alembic 초기화 (DB 테이블 생성)
+alembic revision --autogenerate -m "Initial migration"
+alembic upgrade head
+2️⃣ 협업 플랜에 맞게 수정
+backend/docs/collaboration-plan.md의 초기 설정 부분을 이렇게 수정하면 됩니다:
+
+
+# 1. 프로젝트 클론
+git clone <repo-url>
+cd backend
+
+# 2. 가상환경 생성
+python -m venv venv
+
+# 3. 가상환경 활성화
+# Windows:
+venv\Scripts\activate
+
+# 4. 의존성 설치
+pip install -r requirements.txt
+
+# 5. Docker 컨테이너 실행 (DB, Redis)
+docker-compose up -d
+
+# 6. Alembic 초기화
+alembic revision --autogenerate -m "Initial migration"
+alembic upgrade head
+3️⃣ 의존성 추가할 때
+새로운 패키지가 필요하면:
+
+
+# 패키지 설치
+pip install <package-name>
+
+# requirements.txt에 추가
+pip freeze > requirements.txt
+또는 수동으로 requirements.txt에 추가:
+
+
+# 새로운 패키지
+redis>=5.0.0
+4️⃣ .env 파일 생성 (필수)
+backend/.env 파일을 생성해서 환경 변수 설정:
+
+
+# .env 파일 생성 예시
+DATABASE_URL=postgresql+asyncpg://trapkit:trapkit_password@localhost:5432/trapkit
+REDIS_URL=redis://localhost:6379/0
+JWT_SECRET=development-secret-key-change-in-production
+ANTHROPIC_API_KEY=your-api-key-here
+ENVIRONMENT=development
+CORS_ORIGINS=http://localhost:3000
+5️⃣ 실행 방법
+
+# 개발 서버 실행
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# 테스트 실행
+pytest
+
+# 코드 포맷팅
+ruff check .
+ruff format .
+
+# 타입 체크
+mypy .
