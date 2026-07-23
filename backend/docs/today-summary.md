@@ -769,4 +769,114 @@ async def list_trips(
 
 ---
 
-*마지막 업데이트: 2026-07-22*
+## ✅ 완료된 작업 (7/23)
+
+### Week 3 Item/Memo CRUD 버그 수정
+
+**작업 내용:**
+- Week 3 Item/Memo CRUD 구현 후 발견된 6개 버그 수정 완료
+- 불변 객체 패턴 관련 버그 수정
+- 소유권 확인 로직 수정
+- API 상태코드 정정
+
+**🔧 수정된 버그:**
+
+| # | 버그 | 원인 | 해결 방법 | 파일 |
+|---|------|------|----------|------|
+| 1 | sort_order 업데이트 불가 | `Item.update()`에 sort_order 파라미터 누락 | 파라미터 추가 | [app/domain/models/item.py](c:\Users\tjswn\RBX\Trapkit-fresh\backend\app\domain\models\item.py) |
+| 2 | 정렬 순서 변경 미반영 | `sort_order_up()` 반환값 저장하지 않음 | `updated = item.sort_order_up(...)` | [interfaces/api/v1/routes/items.py](c:\Users\tjswn\RBX\Trapkit-fresh\backend\interfaces\api\v1\routes\items.py) |
+| 3 | AttributeError 소유권 확인 | `item.trip_id.user_id` 접근 시도 | Trip 조회 후 user_id 확인 | [items.py](c:\Users\tjswn\RBX\Trapkit-fresh\backend\interfaces\api\v1\routes\items.py), [memos.py](c:\Users\tjswn\RBX\Trapkit-fresh\backend\interfaces\api\v1\routes\memos.py) |
+| 4 | Memo 중복 정의 | item.py에 Memo 존재 | 중복 삭제 | [app/domain/models/item.py](c:\Users\tjswn\RBX\Trapkit-fresh\backend\app\domain\models\item.py) |
+| 5 | 200 vs 204 상태코드 | None 리턴 시 FastAPI 200 반환 | `Response(204)` 명시적 반환 | [items.py](c:\Users\tjswn\RBX\Trapkit-fresh\backend\interfaces\api\v1\routes\items.py), [memos.py](c:\Users\tjswn\RBX\Trapkit-fresh\backend\interfaces\api\v1\routes\memos.py) |
+| 6 | 빌드 실패 | packages 설정 누락 | packages 명시 | [pyproject.toml](c:\Users\tjswn\RBX\Trapkit-fresh\backend\pyproject.toml) |
+
+**📦 수정된 파일:**
+```
+backend/
+├── app/domain/models/
+│   └── item.py ✅ (sort_order 추가, Memo 중복 삭제)
+├── interfaces/api/v1/routes/
+│   ├── items.py ✅ (sort_order, 소유권 확인, 204)
+│   └── memos.py ✅ (소유권 확인, 204)
+└── pyproject.toml ✅ (packages 설정)
+```
+
+**🎯 주요 수정 내용:**
+
+1. **Item.update() 메서드:**
+   ```python
+   def update(
+       self,
+       name: str | None = None,
+       quantity: str | None = None,
+       tip: str | None = None,
+       baggage_flag: str | None = None,
+       checked: bool | None = None,
+       sort_order: int | None = None,  # ✅ 추가
+   ) -> Self:
+   ```
+
+2. **소유권 확인 로직:**
+   ```python
+   # 수정 후
+   trip = await trip_repo.find_by_id(item.trip_id)
+   if trip is None or trip.user_id != user_id:
+       raise HTTPException(status_code=403, ...)
+   ```
+
+3. **삭제 엔드포인트:**
+   ```python
+   from fastapi import Response
+   return Response(status_code=status.HTTP_204_NO_CONTENT)
+   ```
+
+4. **pyproject.toml:**
+   ```toml
+   [tool.hatch.build.targets.wheel]
+   packages = ["app", "infrastructure", "interfaces", "shared"]
+   ```
+
+**✅ 완료:**
+- [x] sort_order 업데이트 버그 수정
+- [x] 정렬 순서 변경 버그 수정
+- [x] 소유권 확인 로직 수정 (4개 라우터)
+- [x] Memo 중복 정의 삭제
+- [x] 삭제 엔드포인트 204 상태코드 반환
+- [x] pyproject.toml packages 설정 추가
+
+---
+
+## 📊 전체 진행률 (7/23 기준)
+
+| 주차 | A개발자 | B개발자 | 전체 | 상태 |
+|------|---------|---------|------|------|
+| **Week 1** | ✅ 100% | ✅ 100% | **100%** | 완료 |
+| **Week 2** | ✅ 100% | ✅ 100% | **100%** | 완료 |
+| **Week 3** | ✅ 100% | ✅ 100% | **100%** | 완료 (버그 수정 포함) |
+| **Week 4** | ⏳ 0% | ⏳ 0% | **0%** | 예정 (수화물 체커) |
+| **전체** | **75%** | **75%** | **75%** | 진행 중 |
+
+---
+
+## 🎯 다음 단계 (Week 4: 수화물 체커)
+
+### A개발자 작업 (Day 1-2)
+- [ ] Verdict 값 객체 정의
+- [ ] BaggageService 도메인 구현
+- [ ] normalizer.py 구현
+- [ ] BaggageRuleRepository 인터페이스
+
+### B개발자 작업 (Day 3-4)
+- [ ] BaggageRule DB 시드 데이터
+- [ ] BaggageRule ORM 모델
+- [ ] SQLAlchemyBaggageRuleRepository 구현
+- [ ] 캐시 키 전략 구현
+- [ ] POST /api/baggage/check 구현
+
+### 공통 작업 (Day 5)
+- [ ] 통합 테스트
+- [ ] 문서 업데이트
+
+---
+
+*마지막 업데이트: 2026-07-23*

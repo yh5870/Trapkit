@@ -3,11 +3,11 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Self
+from uuid import UUID
 
 from app.domain.models.trip import Trip
 from app.domain.value_objects.trip_id import TripId
 from app.domain.value_objects.item_id import ItemId
-from app.domain.value_objects.memo_id import MemoId
 
 
 @dataclass(frozen=True)
@@ -35,19 +35,21 @@ class Item:
         name: str,
         quantity: str | None = None,
         tip: str | None = None,
+        baggage_flag: str | None = None,
+        source: str = "user",
     ) -> Self:
         """새 Item 생성."""
         return cls(
-            id=ItemId(UUID()),
+            id=ItemId(value=UUID()),
             trip_id=trip_id,
             category=category,
             name=name,
             quantity=quantity,
             tip=tip,
-            baggage_flag=None,  # 기본값: null
-            source="user",    # 기본값: user
-            checked=False,    # 기본값: False
-            sort_order=0,      # 기본값: 0
+            baggage_flag=baggage_flag,
+            source=source,
+            checked=False,
+            sort_order=0,
         )
 
     def update(
@@ -57,6 +59,7 @@ class Item:
         tip: str | None = None,
         baggage_flag: str | None = None,
         checked: bool | None = None,
+        sort_order: int | None = None,
     ) -> Self:
         """Item 업데이트."""
         return Item(
@@ -69,12 +72,14 @@ class Item:
             baggage_flag=baggage_flag if baggage_flag is not None else self.baggage_flag,
             source=self.source,
             checked=checked if checked is not None else self.checked,
+            sort_order=sort_order if sort_order is not None else self.sort_order,
             created_at=self.created_at,
             updated_at=datetime.utcnow() if (
                 name is not None or
                 quantity is not None or
                 baggage_flag is not None or
-                checked is not None
+                checked is not None or
+                sort_order is not None
             ) else self.updated_at,
         )
 
@@ -133,38 +138,3 @@ class ItemList:
                     grouped[category] = []
                 grouped[category].append(item)
         return grouped
-
-
-@dataclass(frozen=True)
-class Memo:
-    """메모 엔티티."""
-
-    id: MemoId
-    trip_id: TripId
-    content: str  # 최대 2,000자 (Text 타입)
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
-
-    @classmethod
-    def create(
-        cls,
-        trip_id: TripId,
-        content: str,
-    ) -> Self:
-        """새 Memo 생성."""
-        # 길이 검증
-        if len(content) > 2000:
-            raise ValueError("메모는 최대 2,000자까지 작성할 수 있습니다.")
-
-        return cls(
-            id=MemoId(UUID()),
-            trip_id=trip_id,
-            content=content,
-        )
-
-    def update_content(self, content: str) -> Self:
-        """메모 내용 업데이트."""
-        if len(content) > 2000:
-            raise ValueError("메모는 최대 2,000자까지 작성할 수 있습니다.")
-        return self.update(content=content)
-```
