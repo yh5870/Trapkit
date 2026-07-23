@@ -128,6 +128,7 @@ backend/src/
 | 통합 테스트 | 공동 | ⏳ 대기 | DB 연동 필요 |
 
 **1주차 완료율: 100% (15/15)**
+**1주차 완료율: 100% (15/15)**
 
 ---
 
@@ -143,7 +144,11 @@ backend/src/
 
 **2주차 산출물:**
 - A: `application/commands/create_trip.py`, `domain/services/trip_generation_service.py`
-- B: `infrastructure/external/gemini_client.py`, `infrastructure/external/redis_client.py`
+- B: `infrastructure/external/gemini_client.py`, `interfaces/api/v1/routes/trips.py`
+- B: `tests/infrastructure/external/test_gemini_client.py` (11개 테스트)
+- B: `tests/interfaces/api/v1/routes/test_trips.py` (6개 테스트)
+
+**2주차 완료율: 100% (8/8)**
 
 ---
 
@@ -739,12 +744,16 @@ main
 
 ### Week 2
 
-- [x] A: `application/commands/create_trip.py` 작성 ✅
-- [x] A: `domain/services/trip_generation_service.py` 작성 ✅
-- [ ] B: `infrastructure/external/gemini_client.py` 작성
-- [ ] B: `infrastructure/external/redis_client.py` 작성
-- [ ] B: `POST /api/trips/generate` 스트리밍 구현
-- [ ] 공동: 스트리밍 테스트 통과
+- [x] A: `application/commands/create_trip.py` 작성
+- [x] A: `domain/services/trip_generation_service.py` 작성
+- [x] B: `infrastructure/external/gemini_client.py` 작성
+- [x] B: `app/core/redis.py` 확인 (기존 구현 활용)
+- [x] B: `interfaces/api/v1/routes/trips.py` 작성 (스트리밍)
+- [x] B: `tests/infrastructure/external/test_gemini_client.py` 작성
+- [x] B: `tests/interfaces/api/v1/routes/test_trips.py` 작성
+- [x] 공동: 스트리밍 테스트 통과
+
+**Week 2 완료율: 100% (8/8)**
 
 ### Week 3
 
@@ -830,6 +839,39 @@ alembic upgrade head
 - A개발자: (연락처)
 - B개발자: (연락처)
 - 프로젝트 채널: (Slack/디스코드)
+
+---
+
+## 📊 전체 진행률 (2026-07-22 기준)
+
+| 주차 | 상태 | 완료율 | 주요 성과 |
+|------|------|--------|---------|
+| **Week 1** | ✅ 완료 | 100% | ORM/Repository/API/캐싱 완료 |
+| **Week 2** | ✅ 완료 | 100% | AI 인프라/스트리밍 완료 |
+| **Week 3** | ⏳ 대기 | 0% | 체크리스트 CRUD |
+| **Week 4** | ⏳ 대기 | 0% | 수화물 체커 |
+| **전체** | - | **50%** | 2/4 완료 |
+
+---
+
+## 🎉 Week 1 & 2 완료 요약
+
+### Week 1: 기반 인프라 + 트립 조회
+- ✅ Trip 엔티티 및 Repository 인터페이스
+- ✅ TripQueryService 구현
+- ✅ ORM 모델 (Trip, Profile, Item, Memo)
+- ✅ SQLAlchemyTripRepository 구현
+- ✅ API 라우터 (GET, POST, PATCH, DELETE)
+- ✅ Redis 캐싱 서비스
+- ✅ DB 연동 및 테이블 생성
+
+### Week 2: 트립 생성
+- ✅ CreateTripCommand 정의
+- ✅ TripGenerationService 및 AIClient 인터페이스
+- ✅ GeminiClient 구현 (AIClient 인터페이스 구현)
+- ✅ Redis Client 확인 (기존 구현 활용)
+- ✅ 스트리밍 API (SSE 기반)
+- ✅ 단위 테스트 (17개 테스트)
 
 ---
 
