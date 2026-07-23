@@ -767,9 +767,10 @@ main
 
 ### Week 4
 
-- [ ] A: `domain/value_objects/verdict.py` 작성
-- [ ] A: `domain/services/baggage_service.py` 작성
-- [ ] A: `shared/utils/normalizer.py` 작성
+- [x] A: `domain/value_objects/verdict.py` 작성 ✅
+- [x] A: `domain/services/baggage_service.py` 작성 ✅
+- [x] A: `shared/utils/normalizer.py` 작성 ✅
+- [ ] A: `domain/repositories/baggage_rule_repository.py` 작성 ✅
 - [ ] B: `infrastructure/database/models/baggage_rule_model.py` 작성
 - [ ] B: `infrastructure/database/repositories/` 구현
 - [ ] B: `POST /api/baggage/check` 구현
