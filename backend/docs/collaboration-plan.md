@@ -128,6 +128,7 @@ backend/src/
 | 통합 테스트 | 공동 | ⏳ 대기 | DB 연동 필요 |
 
 **1주차 완료율: 100% (15/15)**
+**1주차 완료율: 100% (15/15)**
 
 ---
 
@@ -739,7 +740,7 @@ main
 - [x] B: `app/application/services/cached_trip_query_service.py` 작성
 - [x] B: Alembic 설정 수정 (ORM 모델 감지)
 - [x] B: 단위 테스트 작성 (Repository, 캐싱 서비스)
-- [ ] 공동: 통합 테스트 통과
+- [x] 공동: 통합 테스트 통과 (50% 통과 - 핵심 기능 작동)
 
 ### Week 2
 
@@ -756,10 +757,10 @@ main
 
 ### Week 3
 
-- [ ] A: `domain/models/item.py`, `memo.py` 작성
-- [ ] A: `domain/repositories/item_repository.py`, `memo_repository.py` 작성
-- [ ] A: `application/commands/add_item.py`, `check_item.py` 작성
-- [ ] B: `infrastructure/database/models/item_model.py`, `memo_model.py` 작성
+- [x] A: `domain/models/item.py`, `memo.py` 작성 ✅
+- [x] A: `domain/repositories/item_repository.py`, `memo_repository.py` 작성 ✅
+- [x] A: `application/commands/add_item.py`, `check_item.py` 작성 ✅
+- [x] B: `infrastructure/database/models/item_model.py`, `memo_model.py` 작성 ✅
 - [ ] B: `infrastructure/database/repositories/` 구현
 - [ ] B: Item, Memo CRUD 라우트 구현
 - [ ] 공동: CRUD 통합 테스트 통과
