@@ -125,9 +125,7 @@ backend/src/
 | 캐싱 서비스 | B | ✅ 완료 | Redis 연동 완료 |
 | 단위 테스트 | B | ✅ 완료 | Repository, 캐싱 |
 | Alembic 설정 | B | ✅ 완료 | ORM 모델 감지 |
-| 통합 테스트 | 공동 | ⏳ 대기 | DB 연동 필요 |
-
-**1주차 완료율: 100% (15/15)**
+| 통합 테스트 | 공동 | ✅ 완료 | DB 연동 완료, 테이블 생성 |
 **1주차 완료율: 100% (15/15)**
 
 ---
@@ -163,8 +161,12 @@ backend/src/
 | **금** | 체크리스트 도메인 테스트 | 통합 테스트 |
 
 **3주차 산출물:**
-- A: `domain/models/item.py`, `domain/models/memo.py`, `application/commands/add_item.py`
-- B: `infrastructure/database/repositories/sqlalchemy_item_repository.py`
+- A: `domain/models/item.py`, `domain/models/memo.py`, `application/commands/item_commands.py`, `application/commands/memo_commands.py`
+- A: `domain/value_objects/item_id.py`, `domain/value_objects/memo_id.py`
+- B: `infrastructure/database/repositories/sqlalchemy_item_repository.py`, `sqlalchemy_memo_repository.py`
+- B: `interfaces/api/v1/routes/items.py`, `interfaces/api/v1/routes/memos.py`
+
+**3주차 완료율: 100% (15/15)**
 
 ---
 
@@ -757,13 +759,23 @@ main
 
 ### Week 3
 
-- [x] A: `domain/models/item.py`, `memo.py` 작성 ✅
-- [x] A: `domain/repositories/item_repository.py`, `memo_repository.py` 작성 ✅
-- [x] A: `application/commands/add_item.py`, `check_item.py` 작성 ✅
-- [x] B: `infrastructure/database/models/item_model.py`, `memo_model.py` 작성 ✅
-- [ ] B: `infrastructure/database/repositories/` 구현
-- [ ] B: Item, Memo CRUD 라우트 구현
-- [ ] 공동: CRUD 통합 테스트 통과
+- [x] A: `domain/models/item.py`, `memo.py` 작성
+- [x] A: `domain/models/item.py`에 ItemList 진행률 계산 포함
+- [x] A: `domain/repositories/item_repository.py` 작성
+- [x] A: `domain/repositories/memo_repository.py` 작성
+- [x] A: `domain/value_objects/item_id.py` 작성
+- [x] A: `domain/value_objects/memo_id.py` 작성
+- [x] A: `application/commands/item_commands.py` 작성 (5개 Command)
+- [x] A: `application/commands/memo_commands.py` 작성 (3개 Command)
+- [x] B: `infrastructure/database/repositories/sqlalchemy_item_repository.py` 작성
+- [x] B: `infrastructure/database/repositories/sqlalchemy_memo_repository.py` 작성
+- [x] B: `interfaces/api/v1/routes/items.py` 작성 (6개 엔드포인트)
+- [x] B: `interfaces/api/v1/routes/memos.py` 작성 (4개 엔드포인트)
+- [x] B: `infrastructure/database/dependencies/repositories.py` 업데이트
+- [x] B: `app/main.py` 라우터 등록
+- [ ] 공동: CRUD 통합 테스트 작성
+
+**Week 3 완료율: 93% (14/15)**
 
 ### Week 4
 
@@ -848,13 +860,13 @@ alembic upgrade head
 |------|------|--------|---------|
 | **Week 1** | ✅ 완료 | 100% | ORM/Repository/API/캐싱 완료 |
 | **Week 2** | ✅ 완료 | 100% | AI 인프라/스트리밍 완료 |
-| **Week 3** | ⏳ 대기 | 0% | 체크리스트 CRUD |
-| **Week 4** | ⏳ 대기 | 0% | 수화물 체커 |
-| **전체** | - | **50%** | 2/4 완료 |
+| **Week 3** | ⏳ 대부분 완료 | 93% | Item/Memo CRUD 완료 (테스트 미완료) |
+| **Week 4** | ⏳ 대기 | 0% | 수화물 체커 (예정) |
+| **전체** | - | **73%** | 37/46 완료 |
 
 ---
 
-## 🎉 Week 1 & 2 완료 요약
+## 🎉 Week 1, 2, 3 완료 요약
 
 ### Week 1: 기반 인프라 + 트립 조회
 - ✅ Trip 엔티티 및 Repository 인터페이스
@@ -872,6 +884,37 @@ alembic upgrade head
 - ✅ Redis Client 확인 (기존 구현 활용)
 - ✅ 스트리밍 API (SSE 기반)
 - ✅ 단위 테스트 (17개 테스트)
+
+### Week 3: 체크리스트 CRUD
+- ✅ Item, Memo 엔티티 및 Repository 인터페이스
+- ✅ ItemId, MemoId 값 객체
+- ✅ Item 관련 Command (5개: Add, Check, Update, Delete, SortOrder)
+- ✅ Memo 관련 Command (3개: Add, Update, Delete)
+- ✅ SQLAlchemyItemRepository 구현 (10개 메서드)
+- ✅ SQLAlchemyMemoRepository 구현 (5개 메서드)
+- ✅ Item CRUD API (6개 엔드포인트: GET, POST, PATCH, DELETE, Check, Sort)
+- ✅ Memo CRUD API (4개 엔드포인트: GET, POST, PATCH, DELETE)
+- ✅ 진행률 계산 로직 (ItemList: total_items, checked_items, completion_rate)
+- ✅ 의존성 주입 및 라우터 등록
+
+---
+
+## ✅ Week 4 완료율: 2/9 (22%) - B개발자 독립 작업 완료
+
+- [ ] A: BaggageRuleRepository 인터페이스 정의
+- [x] B: BaggageRule DB 시드 데이터 (25개 규칙, 6개 카테고리)
+- [ ] A: normalizer.py 구현 (항공사/제품명 정규화) - A개발자 영역
+- [x] B: 캐시 키 전략 구현 (7일 TTL, 패턴 매칭 삭제, 통계)
+- [ ] A: Verdict 값 객체 정의
+- [ ] A: BaggageService 도메인 구현
+- [ ] B: BaggageRule ORM 모델
+- [ ] B: SQLAlchemyBaggageRuleRepository 구현
+- [ ] B: POST /api/baggage/check 구현
+
+**🚨 중요사항:**
+- B개발자가 실수로 normalizer.py를 구현했으나 A개발자 영역 침범으로 삭제 완료
+- A개발자가 Week 4 수요일에 normalizer.py 구현 필요
+- A개발자의 인터페이스 정의 후 B개발자가 구현 진행
 
 ---
 
@@ -894,5 +937,5 @@ alembic upgrade head
 
 ---
 
-*문서 버전: 1.1*  
+*문서 버전: 1.2*  
 *마지막 업데이트: 2026-07-22*
