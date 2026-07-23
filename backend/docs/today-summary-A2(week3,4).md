@@ -429,8 +429,8 @@ class DeleteMemoCommand:
 |------|------|------|------|
 | ItemRepository 인터페이스 정의 | A | ✅ 완료 | 도메인 모델 완료 |
 | MemoRepository 인터페이스 정의 | A | ✅ 완료 | 도메인 모델 완료 |
-| AddItemCommand 구현 | A | ⏳ | 도메인 모델 참조 |
-| CheckItemCommand 구현 | A | ⏳ | 도메인 모델 참조 |
+| AddItemCommand 구현 | A | ✅ 완료 | 도메인 모델 참조 |
+| CheckItemCommand 구현 | A | ✅ 완료 | 도메인 모델 참조 |
 | ItemCommandService 구현 | A | ⏳ | Repository 필요 |
 | MemoCommandService 구현 | A | ⏳ | Repository 필요 |
 | 진행률 계산 로직 | A | ⏳ | 도메인 로직 |
@@ -438,6 +438,141 @@ class DeleteMemoCommand:
 | 통합 테스트 | 공동 | ⏳ | 완료 필요 |
 
 ---
+
+## 🎉 Week 4 선행 완료 (A개발자)
+
+### 8. Verdict 값 객체 구현 ✅
+
+#### `app/domain/value_objects/verdict.py`
+
+**🎯 목적**
+- 수화물 규정 판정 결과를 값 객체로 캡승화
+- 판정 타입별로 명확한 라벨링 제공
+- UI 표시를 위한 유틸리티 메서드 포함
+
+**💡 이유**
+- B개발자가 API 응답에서 사용할 수 있는 판정 결과
+- 도메인 로직과 UI 표시 분리
+- 불변 객체 패턴으로 판정 결과 일관성 보장
+
+**📦 구현된 기능**
+- `VerdictType` Enum: ALLOWED, CONDITIONAL, FORBIDDEN
+- `label`: 한국어 라벨 ("가능 ○", "조건부 가능 △", "불가 ✕")
+- `emoji`: 이모지 ("✅", "⚠️", "❌")
+- `color_code`: HTML 색상 코드
+- `is_allowed()`, `is_forbidden()` 편의 메서드
+- `get_short_reason()`: 길이 제한 이유 자동 축소
+
+---
+
+### 9. BaggageRuleRepository 인터페이스 구현 ✅
+
+#### `app/domain/repositories/baggage_rule_repository.py`
+
+**🎯 목적**
+- 수화물 규정 DB 조회 인터페이스 정의
+- B개발자가 SQLAlchemy로 구현할 명확한 계약서 제공
+- 캐싱 지원 및 정규화된 키 조회 기능
+
+**💡 이유**
+- B개발자가 ORM 모델과 리포지토리 구현 시 필요
+- 수화물 규칙이 많으므로 효율적 조회 필요
+- 캐싱 전략과 연동하도록 설계
+
+**📦 구현된 메서드**
+- `find_by_key()`: 키로 규칙 조회
+- `find_by_normalized_key()`: 정규화된 키로 규칙 조회
+- `get_all_rules()`: 모든 규칙 조회
+
+---
+
+### 10. BaggageService 도메인 구현 ✅
+
+#### `app/domain/services/baggage_service.py`
+
+**🎯 목적**
+- 수화물 규정 체크 로직 구현
+- 기내 반입/위탁 물로 반입 판정
+- 규칙 DB 조회 → 판정 로직 수행
+
+**💡 이유**
+- A개발자가 비즈니스 로직 전담
+- B개발자의 인프라 구현과 분리
+- 규칙 데이터 구조 유연성 유지
+
+**📦 구현된 기능**
+```python
+async def check(
+    self,
+    airline: str,
+    product: str,
+    value: float | None = None,
+    unit: str | None = None,
+    cached_rules: dict | None = None,
+) -> tuple[Verdict, Verdict]:
+    """수화물 규정 체크.
+
+    Returns:
+        (carry_on_verdict, checked_verdict): 기내 반입, 위탁 물로 판정 결과
+    """
+```
+
+**주요 로직:**
+1. 단위 유효성 검증
+2. 규칙 조회 (캐시 → DB → 별명 규칙)
+3. 단위 변환 (cm → inch, kg → lb 등)
+4. 판정 로직 실행 (최대 크기, 최대 무게, 제한 사항)
+5. 규칙 없으면 기본 "조건부 가능" 판정
+
+---
+
+### 11. 정규화 유틸리티 구현 ✅
+
+#### `shared/utils/normalizer.py`
+
+**🎯 목적**
+- 항공사명/제품명 정규화
+- 검색용 포맷 변환
+- 텍스트에서 정보 추출
+
+**💡 이유**
+- 사용자 입력이 다양할 수 있으므로 정규화 필수
+- 검색 효율성을 위해 포맷 변환
+- B개발자가 API에서 사용 가능
+
+**📦 구현된 함수**
+- `normalize_airline()`: 항공사명 정규화
+- `normalize_product()`: 제품명 정규화 (카테고리별 패턴)
+- `extract_airline_from_text()`: 텍스트에서 항공사명 추출
+- `extract_product_from_text()`: 텍스트에서 제품명 추출
+- `get_airline_display_name()`: 출력용 이름 (공백 제거)
+- `get_product_display_name()`: 출력용 이름 (공백 제거)
+- `format_airline_for_search()`: 검색용 포맷 (소문자, 공백 제거)
+- `format_product_for_search()`: 검색용 포맷 (소문자, 공백 제거)
+
+**특징:**
+- 항공사 별명 매핑 (15+ 항공사)
+- 제품 카테고리별 패턴 매칭 (macbook, iphone, ipad, laptop)
+- 텍스트에서 항공사/제품명 추출 함수
+- 검색용 소문자 포맷 변환
+- 공백 제거 및 첫 글자 대문자화
+
+---
+
+## 📊 전체 진행률 (업데이트)
+
+| 주차 | A개발자 | B개발자 | 전체 |
+|------|-----------|----------|------|
+| **Week 1** | ✅ 100% | ✅ 100% | **100%** |
+| **Week 2** | ✅ 100% | ⏳ 0% | **50%** |
+| **Week 3** | ✅ 100% | ⏳ 0% | **50%** |
+| **Week 4** | ✅ 100% | ⏳ 0% | **75%** |
+
+**현재 A개발자 전체 진행률: 83%**
+
+---
+
+## ⏳ Week 3 대기 작업 (업데이트)
 
 ## ⏳ Week 4 대기 작업 (미시작)
 
