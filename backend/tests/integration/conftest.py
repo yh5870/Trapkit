@@ -9,9 +9,12 @@ from httpx import AsyncClient
 
 from app.main import app
 from app.domain.models.trip import Trip
+from app.domain.models.item import Item
 from app.domain.value_objects.trip_id import TripId
+from app.domain.value_objects.item_id import ItemId
 from app.core.security import create_token
 from infrastructure.database.repositories.sqlalchemy_trip_repository import SQLAlchemyTripRepository
+from infrastructure.database.repositories.sqlalchemy_item_repository import SQLAlchemyItemRepository
 from shared.config.database import get_db
 
 
@@ -112,3 +115,69 @@ def test_client(db_session: AsyncSession) -> TestClient:
 def unauth_headers() -> dict[str, str]:
     """미인증 헤더."""
     return {}
+
+
+@pytest.fixture
+async def test_item(db_session: AsyncSession, test_trip: Trip) -> Item:
+    """테스트용 Item 생성."""
+    item = Item.create(
+        trip_id=test_trip.id,
+        category="여권",
+        name="여권",
+        quantity="1개",
+        tip="유효기간 6개월 이상 확인",
+        baggage_flag="carry_on",
+        source="user",
+    )
+
+    repo = SQLAlchemyItemRepository(db_session)
+    return await repo.save(item)
+
+
+@pytest.fixture
+async def multiple_test_items(db_session: AsyncSession, test_trip: Trip) -> list[Item]:
+    """여러 개의 테스트용 Item 생성."""
+    items_data = [
+        {
+            "category": "여권",
+            "name": "여권",
+            "quantity": "1개",
+            "tip": "유효기간 6개월 이상",
+            "baggage_flag": "carry_on",
+            "source": "user",
+        },
+        {
+            "category": "의류",
+            "name": "티셔츠",
+            "quantity": "3벌",
+            "tip": "경량으로 챙기기",
+            "baggage_flag": "checked",
+            "source": "ai",
+        },
+        {
+            "category": "전자기기",
+            "name": "충전기",
+            "quantity": "2개",
+            "tip": "해외용 어댑터",
+            "baggage_flag": "carry_on",
+            "source": "user",
+        },
+    ]
+
+    repo = SQLAlchemyItemRepository(db_session)
+    items = []
+
+    for data in items_data:
+        item = Item.create(
+            trip_id=test_trip.id,
+            category=data["category"],
+            name=data["name"],
+            quantity=data["quantity"],
+            tip=data["tip"],
+            baggage_flag=data["baggage_flag"],
+            source=data["source"],
+        )
+        saved_item = await repo.save(item)
+        items.append(saved_item)
+
+    return items

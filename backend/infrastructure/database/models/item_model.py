@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, String, func
+from sqlalchemy import Boolean, DateTime, String, Integer, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from shared.config.database import Base
@@ -18,7 +18,7 @@ class ItemModel(Base):
     __tablename__ = "items"
 
     # Primary Key
-    id: Mapped[UUID] = mapped_column(
+    id: Mapped[str] = mapped_column(
         String(36),
         primary_key=True,
         index=True,
@@ -62,6 +62,13 @@ class ItemModel(Base):
         nullable=False,
         default=False,
         index=True,
+    )
+
+    # Sort Order
+    sort_order: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
     )
 
     # Timestamps

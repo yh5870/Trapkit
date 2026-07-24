@@ -22,7 +22,6 @@ class AddItemCommand:
 class CheckItemCommand:
     """Item 체크/언체크 Command."""
 
-    item_id: str
     checked: bool
 
 
@@ -30,7 +29,6 @@ class CheckItemCommand:
 class UpdateItemCommand:
     """Item 수정 Command."""
 
-    item_id: str
     name: str | None = None
     quantity: str | None = None
     tip: str | None = None
@@ -49,5 +47,4 @@ class DeleteItemCommand:
 class UpdateSortOrderCommand:
     """Item 정렬 순서 변경 Command."""
 
-    item_id: str
     new_order: int

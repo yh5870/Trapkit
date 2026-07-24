@@ -10,6 +10,7 @@ from typing import Any, AsyncGenerator
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import uuid4
 
@@ -21,6 +22,7 @@ from app.domain.value_objects.trip_id import TripId
 from app.utils.logger import setup_logger
 from infrastructure.database.dependencies import get_trip_repository
 from infrastructure.external.gemini_client import GeminiClient
+from interfaces.api.dependencies.auth import get_current_user_id
 from shared.config.database import get_db
 
 logger = setup_logger(__name__)
@@ -244,28 +246,20 @@ async def generate_trip_stream(
 
 
 # Pydantic 스키마 (Request Body 사용 시)
-class TripGenerateRequest:
+class TripGenerateRequest(BaseModel):
     """트립 생성 요청 스키마."""
 
-    def __init__(
-        self,
-        destination: str,
-        purpose: list[str],
-        duration_nights: int | None = None,
-        departure_month: int | None = None,
-        companions: str | None = None,
-    ):
-        self.destination = destination
-        self.purpose = purpose
-        self.duration_nights = duration_nights
-        self.departure_month = departure_month
-        self.companions = companions
+    destination: str = Field(..., description="여행지")
+    purpose: list[str] = Field(..., description="여행 목적")
+    duration_nights: int | None = Field(None, description="여행 기간 (박)")
+    departure_month: int | None = Field(None, description="출발 월")
+    companions: str | None = Field(None, description="동행인")
 
 
 @router.post("/generate/body")
 async def generate_trip_stream_body(
     request_data: TripGenerateRequest,
-    user_id: str,  # 인증 토큰에서 추출
+    user_id: str = Depends(get_current_user_id),  # 인증 토큰에서 추출
     trip_repo: TripRepository = Depends(get_trip_repository),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:

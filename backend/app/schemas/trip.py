@@ -121,3 +121,31 @@ class UpdateMemoRequest(BaseModel):
     """메모 수정 요청."""
 
     content: str = Field(..., min_length=1, max_length=2000)
+
+
+class ImportTripItem(BaseModel):
+    """import 할 여행 데이터 항목."""
+
+    title: str = Field(..., min_length=1, max_length=255)
+    destination: str = Field(..., min_length=1, max_length=255)
+    purpose: list[str] = Field(default_factory=list)
+    duration_nights: int | None = None
+    departure_month: int | None = None
+    companions: str | None = None
+    categories: list[Category] = Field(default_factory=list)
+    cautions: list[Cautions] = Field(default_factory=list)
+    baggage_summary: list[dict[str, Any]] = Field(default_factory=list)
+    memos: list[Memo] = Field(default_factory=list)
+
+
+class ImportTripsRequest(BaseModel):
+    """여행 import 요청."""
+
+    trips: list[ImportTripItem] = Field(..., min_length=1)
+
+
+class ImportTripsResponse(BaseModel):
+    """여행 import 응답."""
+
+    imported_count: int
+    imported_trip_ids: list[str]

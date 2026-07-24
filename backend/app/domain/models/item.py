@@ -1,13 +1,14 @@
-"""Item 엔티티."""
+"""Item 및 Memo 엔티티."""
 
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Self
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from app.domain.models.trip import Trip
 from app.domain.value_objects.trip_id import TripId
 from app.domain.value_objects.item_id import ItemId
+from app.domain.value_objects.memo_id import MemoId
 
 
 @dataclass(frozen=True)
@@ -40,7 +41,7 @@ class Item:
     ) -> Self:
         """새 Item 생성."""
         return cls(
-            id=ItemId(value=UUID()),
+            id=ItemId(value=uuid4()),
             trip_id=trip_id,
             category=category,
             name=name,
@@ -138,3 +139,37 @@ class ItemList:
                     grouped[category] = []
                 grouped[category].append(item)
         return grouped
+
+
+@dataclass(frozen=True)
+class Memo:
+    """여행 메모 엔티티."""
+
+    id: MemoId
+    trip_id: TripId
+    content: str
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+
+    @classmethod
+    def create(
+        cls,
+        trip_id: TripId,
+        content: str,
+    ) -> Self:
+        """새 Memo 생성."""
+        return cls(
+            id=MemoId(value=uuid4()),
+            trip_id=trip_id,
+            content=content,
+        )
+
+    def update(self, content: str) -> Self:
+        """Memo 업데이트."""
+        return Memo(
+            id=self.id,
+            trip_id=self.trip_id,
+            content=content,
+            created_at=self.created_at,
+            updated_at=datetime.utcnow(),
+        )

@@ -180,12 +180,16 @@ class BaggageService:
             return value * 0.001
         return value  # kg
 
-    def _get_default_verdict(self, airline: str, product: str) -> Verdict:
+    def _get_default_verdict(self, airline: str, product: str) -> tuple[Verdict, Verdict]:
         """기본 판정 (보수적).
 
         규칙이 없으면 "조건부 가능"으로 판정.
+
+        Returns:
+            (carry_on_verdict, checked_verdict): 기내 반입, 위탁물로 판정 결과
         """
-        return Verdict(
+        default_verdict = Verdict(
             verdict=VerdictType.CONDITIONAL,
             reason=f"{airline}/{product}: 규칙 정보가 없습니다. 항공사나 제품명을 확인해주세요."
         )
+        return default_verdict, default_verdict

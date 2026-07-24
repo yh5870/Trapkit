@@ -782,12 +782,17 @@ main
 - [x] A: `domain/value_objects/verdict.py` 작성 ✅
 - [x] A: `domain/services/baggage_service.py` 작성 ✅
 - [x] A: `shared/utils/normalizer.py` 작성 ✅
-- [ ] A: `domain/repositories/baggage_rule_repository.py` 작성 ✅
-- [ ] B: `infrastructure/database/models/baggage_rule_model.py` 작성
-- [ ] B: `infrastructure/database/repositories/` 구현
-- [ ] B: `POST /api/baggage/check` 구현
-- [ ] B: 캐시 TTL 최적화
-- [ ] 공동: 최종 통합 테스트 통과
+- [x] A: `domain/repositories/baggage_rule_repository.py` 작성 ✅
+- [x] B: `infrastructure/database/models/baggage_rule_model.py` 작성 ✅
+- [x] B: `infrastructure/database/repositories/sqlalchemy_baggage_rule_repository.py` 작성 ✅
+- [x] B: `POST /api/baggage/check` 구현 ✅
+- [x] B: `interfaces/api/v1/schemas/baggage.py` 작성 ✅
+- [x] B: `infrastructure/database/dependencies/repositories.py` 업데이트 ✅
+- [x] B: 캐시 TTL 최적화 (7일 TTL) ✅
+- [x] B: `infrastructure/external/redis_baggage_client.py` 작성 ✅
+- [x] 공동: 최종 통합 테스트 통과 ✅
+
+**Week 4 완료율: 100% (11/11) 🎉**
 
 ---
 
@@ -855,15 +860,15 @@ alembic upgrade head
 
 ---
 
-## 📊 전체 진행률 (2026-07-22 기준)
+## 📊 전체 진행률 (2026-07-23 기준)
 
 | 주차 | 상태 | 완료율 | 주요 성과 |
 |------|------|--------|---------|
 | **Week 1** | ✅ 완료 | 100% | ORM/Repository/API/캐싱 완료 |
 | **Week 2** | ✅ 완료 | 100% | AI 인프라/스트리밍 완료 |
-| **Week 3** | ⏳ 대부분 완료 | 93% | Item/Memo CRUD 완료 (테스트 미완료) |
-| **Week 4** | ⏳ 대기 | 0% | 수화물 체커 (예정) |
-| **전체** | - | **73%** | 37/46 완료 |
+| **Week 3** | ✅ 완료 | 100% | Item/Memo CRUD 완료 (버그 수정 포함) |
+| **Week 4** | ✅ 완료 | 100% | 수화물 체커 (규정 검증, 캐시, API) |
+| **전체** | 🎉 완료 | **100%** | 50/50 완료 | |
 
 ---
 
@@ -900,22 +905,24 @@ alembic upgrade head
 
 ---
 
-## ✅ Week 4 완료율: 2/9 (22%) - B개발자 독립 작업 완료
+## ✅ Week 4 완료율: 100% (11/11) - 수화물 체커 완료 🎉
 
-- [ ] A: BaggageRuleRepository 인터페이스 정의
-- [x] B: BaggageRule DB 시드 데이터 (25개 규칙, 6개 카테고리)
-- [ ] A: normalizer.py 구현 (항공사/제품명 정규화) - A개발자 영역
-- [x] B: 캐시 키 전략 구현 (7일 TTL, 패턴 매칭 삭제, 통계)
-- [ ] A: Verdict 값 객체 정의
-- [ ] A: BaggageService 도메인 구현
-- [ ] B: BaggageRule ORM 모델
-- [ ] B: SQLAlchemyBaggageRuleRepository 구현
-- [ ] B: POST /api/baggage/check 구현
+- [x] A: BaggageRuleRepository 인터페이스 정의 ✅
+- [x] B: BaggageRule DB 시드 데이터 (25개 규칙, 6개 카테고리) ✅
+- [x] A: normalizer.py 구현 (항공사/제품명 정규화) ✅
+- [x] B: 캐시 전략 구현 (Redis Upstash, 7일 TTL) ✅
+- [x] A: Verdict 값 객체 정의 ✅
+- [x] A: BaggageService 도메인 구현 ✅
+- [x] B: BaggageRule ORM 모델 ✅
+- [x] B: SQLAlchemyBaggageRuleRepository 구현 ✅
+- [x] B: POST /api/baggage/check 구현 ✅
+- [x] B: Pydantic 스키마 (Request/Response) ✅
+- [x] 공동: 통합 테스트 완료 ✅
 
-**🚨 중요사항:**
-- B개발자가 실수로 normalizer.py를 구현했으나 A개발자 영역 침범으로 삭제 완료
-- A개발자가 Week 4 수요일에 normalizer.py 구현 필요
-- A개발자의 인터페이스 정의 후 B개발자가 구현 진행
+**🎉 Week 4 완료 요약:**
+- A개발자: 도메인 레이어 완료 (Verdict, BaggageService, normalizer, Repository 인터페이스)
+- B개발자: 인프라/인터페이스 레이어 완료 (ORM, Repository, API, 캐시, 테스트)
+- 협업 프로세스: 의존성 역전 원칙 완벽 적용 ✅
 
 ---
 
@@ -938,5 +945,6 @@ alembic upgrade head
 
 ---
 
-*문서 버전: 1.2*  
-*마지막 업데이트: 2026-07-22*
+*문서 버전: 1.3*  
+*마지막 업데이트: 2026-07-23*
+

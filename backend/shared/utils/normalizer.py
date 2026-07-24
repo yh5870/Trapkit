@@ -253,3 +253,24 @@ def format_product_for_search(product: str) -> str:
     if not product:
         return ""
     return product.lower().strip().replace(" ", "_")
+
+
+def generate_baggage_cache_key(airline: str, product: str, value: float, unit: str) -> str:
+    """수화물 캐시 키 생성.
+
+    Args:
+        airline: 항공사명
+        product: 제품명
+        value: 수치
+        unit: 단위
+
+    Returns:
+        캐시 키 포맷: "airline:product:value:unit"
+
+    Examples:
+        >>> generate_baggage_cache_key("대한항공", "MacBook", 15.6, "inch")
+        '대한항공:macbook:15.6:inch'
+    """
+    normalized_airline = format_airline_for_search(airline)
+    normalized_product = format_product_for_search(product)
+    return f"{normalized_airline}:{normalized_product}:{value}:{unit}"
