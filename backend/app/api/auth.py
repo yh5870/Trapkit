@@ -93,6 +93,31 @@ async def logout():
     return {"message": "Logged out successfully"}
 
 
+@router.get("/me", response_model=UserResponse)
+async def get_current_user(
+    user_id: str = Depends(get_current_user_id),
+    user_repo: UserRepository = Depends(get_user_repository),
+):
+    """현재 사용자 정보 조회."""
+    logger.info(f"사용자 정보 조회: {user_id}")
+
+    from uuid import UUID
+
+    user = await user_repo.find_by_id(UUID(user_id))
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다.",
+        )
+
+    return UserResponse(
+        id=user["id"],
+        email=user["email"],
+        nickname=user["nickname"],
+        created_at=user["created_at"] or "",
+    )
+
+
 @router.post("/reset-request")
 async def reset_request(email: str):
     """비밀번호 재설정 요청."""

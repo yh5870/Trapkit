@@ -36,8 +36,7 @@ class Settings(BaseSettings):
 
     # CORS
     CORS_ORIGINS: list[str] = [
-        "http://localhost:3000",
-        "http://localhost:3003",  # 프론트엔드 포트
+        "http://localhost:3000"  # 프론트엔드 포트
     ]
 
     # Environment
