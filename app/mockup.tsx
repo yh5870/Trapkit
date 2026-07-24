@@ -22,6 +22,18 @@ function Plane({ className = "" }: { className?: string }) {
   );
 }
 
+function EyebrowPlane() {
+  return (
+    <span className="eyebrow-plane" aria-hidden="true">
+      <svg width="20" height="16" viewBox="0 0 24 18" aria-hidden="true">
+        <line x1="0" y1="14" x2="24" y2="14" stroke="currentColor" strokeWidth="1.5" strokeOpacity="0.3" strokeDasharray="4 2" />
+        <path d="M3 10l4-2 4 3 5-3 3 2" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.4" />
+        <path d="M2 9l2.5-1 3 2 3.5-2 2 1 3-1.5 2 1 2.5-1" fill="currentColor" opacity="0.6" />
+      </svg>
+    </span>
+  );
+}
+
 function useAuth() {
   const [loggedIn, setLoggedInState] = useState(false);
   useEffect(() => setLoggedInState(localStorage.getItem("tripkit-auth") === "1"), []);
@@ -94,6 +106,50 @@ function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [customPurpose, setCustomPurpose] = useState("");
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const placeholders = ["예: 일본 삿포로, 다낭, 제주도", "예: 오사카, 방콕, 싱가포르", "예: 뉴욕, 파리, 런던"];
+  const [headlineStep, setHeadlineStep] = useState(0);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => { setPrefersReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches); }, []);
+
+  useEffect(() => {
+    if (prefersReducedMotion) return;
+
+    const timeline = [
+      { step: 1, delay: 0 },      // "가방을" wobble start
+      { step: 2, delay: 550 },    // wobble end, "열기 전에," fade out start
+      { step: 3, delay: 700 },    // "열기 전에," fade out done
+      { step: 4, delay: 900 },    // "열기 전에," fade in start
+      { step: 5, delay: 1500 },   // line 1 done, "여행을" wobble start
+      { step: 6, delay: 2050 },   // wobble end, "먼저" fade in
+      { step: 7, delay: 2300 },   // "담아요." fade in
+      { step: 8, delay: 3000 },   // loop start
+    ];
+
+    let stepIndex = 0;
+    const runAnimation = () => {
+      if (stepIndex >= timeline.length) stepIndex = 0;
+      const { step } = timeline[stepIndex];
+      setHeadlineStep(step);
+      const nextDelay = stepIndex < timeline.length - 1 ? timeline[stepIndex + 1].delay - timeline[stepIndex].delay : 3000;
+      stepIndex++;
+      animationRef.current = setTimeout(runAnimation, nextDelay);
+    };
+
+    const animationRef = { current: null as NodeJS.Timeout | null };
+    animationRef.current = setTimeout(runAnimation, 0);
+
+    return () => { if (animationRef.current) clearTimeout(animationRef.current); };
+  }, [prefersReducedMotion]);
+
+  useEffect(() => {
+    if (!isInputFocused && !destination) {
+      const interval = setInterval(() => setPlaceholderIndex((prev) => (prev + 1) % placeholders.length), 3000);
+      return () => clearInterval(interval);
+    }
+  }, [isInputFocused, destination]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -110,12 +166,35 @@ function Home() {
     <Shell route="/">
       <section className="home-hero">
         <div className="hero-copy">
-          <p className="eyebrow">YOUR TRIP, PACKED RIGHT</p>
-          <h1>가방을 열기 전에,<br /><em>여행을 먼저 담아요.</em></h1>
+          <p className="eyebrow">YOUR TRIP, PACKED RIGHT <EyebrowPlane /></p>
+          <h1>
+            <span className="headline-word">
+              <span className={`word-fade-in ${headlineStep === 1 && !prefersReducedMotion ? 'word-wobble' : ''}`}>
+                가방을
+              </span>
+              <span className="word-fade-in">
+                열기 전에,
+              </span>
+            </span>
+            <br />
+            <em>
+              <span className="headline-word">
+                <span className={`word-fade-in ${headlineStep === 5 && !prefersReducedMotion ? 'word-wobble' : ''}`}>
+                  여행을
+                </span>
+              </span>
+              <span className="headline-char word-fade-in" style={{ opacity: headlineStep >= 6 || prefersReducedMotion ? 1 : 0, animation: headlineStep === 6 && !prefersReducedMotion ? 'fadeIn 0.25s ease-out forwards' : 'none' }}>
+                먼저
+              </span>
+              <span className="headline-char word-fade-in" style={{ opacity: headlineStep >= 7 || prefersReducedMotion ? 1 : 0, animation: headlineStep === 7 && !prefersReducedMotion ? 'fadeIn 0.25s ease-out forwards' : 'none' }}>
+                담아요.
+              </span>
+            </em>
+          </h1>
           <p>{homeData.page.tagline}. 블로그를 뒤지는 대신 이번 여행에 맞는 준비를 바로 시작하세요.</p>
         </div>
         <div className="route-stamp" aria-hidden="true">
-          <span>ICN</span><i><Plane /></i><span>CTS</span>
+          <span className="airport-code">ICN</span><i><Plane /></i><span className="airport-code">CTS</span>
           <small>DEC · SNOW ROUTE</small>
         </div>
       </section>
@@ -126,7 +205,14 @@ function Home() {
           <label className="field-label" htmlFor="destination">{homeData.page.prompt}</label>
           <div className={`destination-field ${error ? "invalid" : ""}`}>
             <span className="pin">●</span>
-            <input id="destination" value={destination} onChange={(e) => setDestination(e.target.value)} placeholder={homeData.view.placeholders.destination} />
+            <input
+              id="destination"
+              value={destination}
+              onChange={(e) => setDestination(e.target.value)}
+              placeholder={isInputFocused || destination ? homeData.view.placeholders.destination : placeholders[placeholderIndex]}
+              onFocus={() => setIsInputFocused(true)}
+              onBlur={() => setIsInputFocused(false)}
+            />
             <span className="airport-code">DESTINATION</span>
           </div>
           {error && <p className="field-error">{error}</p>}
@@ -134,7 +220,7 @@ function Home() {
           <fieldset>
             <legend>어떤 여행인가요?</legend>
             <div className="chips">
-              {homeData.view.purposeChips.map((purpose) => <button type="button" key={purpose} className={purposes.includes(purpose) ? "selected" : ""} onClick={() => setPurposes((current) => current.includes(purpose) ? current.filter((item) => item !== purpose) : [...current, purpose])}>{purpose}</button>)}
+              {homeData.view.purposeChips.map((purpose, index) => <button type="button" key={purpose} className={purposes.includes(purpose) ? "selected" : ""} style={{ animationDelay: `${index * 60}ms` }} onClick={() => setPurposes((current) => current.includes(purpose) ? current.filter((item) => item !== purpose) : [...current, purpose])}>{purpose}</button>)}
               <input aria-label="여행 목적 직접 입력" placeholder="직접 입력 +" value={customPurpose} onChange={(e) => setCustomPurpose(e.target.value)} />
             </div>
             {!purposes.length && !customPurpose && <p className="helper">선택하지 않으면 일반 관광 기준으로 만들어요.</p>}
@@ -221,7 +307,7 @@ function Trip() {
           <div>{editingTitle ? <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} onBlur={() => setEditingTitle(false)} onKeyDown={(e) => e.key === "Enter" && setEditingTitle(false)} /> : <h1 onClick={() => setEditingTitle(true)}>{title} <small>✎</small></h1>}<p>{tripData.page.meta}</p></div>
           <div className="progress-copy"><strong>{checked}<span>/{total}</span></strong><small>{percent}% 준비 완료</small></div>
         </div>
-        <div className="progress-track"><span style={{ width: `${percent}%` }} /></div>
+        <div className={`progress-track ${percent >= 80 ? "high-progress" : ""}`}><span style={{ width: `${percent}%` }} /></div>
       </section>
 
       <div className="tabs" role="tablist">{tripData.view.tabs.map((value) => <button role="tab" aria-selected={tab === value} className={tab === value ? "active" : ""} key={value} onClick={() => setTab(value)}>{value}{value === "체크리스트" && <span>{total}</span>}</button>)}</div>
