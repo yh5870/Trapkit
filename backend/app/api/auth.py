@@ -6,54 +6,81 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.security import create_token, hash_password, verify_password
 from app.dependencies import SessionDep
+from app.domain.repositories.user_repository import UserRepository
 from app.schemas.auth import LoginRequest, SignupRequest, TokenResponse, UserResponse
 from app.utils.logger import setup_logger
 from app.utils.exceptions import UnauthorizedException
+from infrastructure.database.dependencies import get_user_repository
+from interfaces.api.dependencies.auth import get_current_user_id
 
 logger = setup_logger(__name__)
 router = APIRouter()
 
 
 @router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def signup(body: SignupRequest, db: SessionDep):
+async def signup(
+    body: SignupRequest,
+    user_repo: UserRepository = Depends(get_user_repository),
+):
     """회원가입."""
-    # TODO: DB에 사용자 생성
-    # user = User(email=body.email, password_hash=hash_password(body.password), nickname=body.nickname)
-    # db.add(user)
-    # await db.commit()
-    # await db.refresh(user)
     logger.info(f"회원가입 요청: {body.email}")
 
-    # 임시 응답
-    return UserResponse(
-        id="temp-id",
+    # 이메일 중복 확인
+    existing_user = await user_repo.find_by_email(body.email)
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="이미 등록된 이메일입니다.",
+        )
+
+    # 비밀번호 해시
+    password_hash = hash_password(body.password)
+
+    # 사용자 저장
+    user = await user_repo.save(
         email=body.email,
+        password_hash=password_hash,
         nickname=body.nickname,
-        created_at="2026-07-21T00:00:00Z",
+    )
+
+    logger.info(f"회원가입 완료: {body.email}, ID: {user['id']}")
+
+    return UserResponse(
+        id=user["id"],
+        email=user["email"],
+        nickname=user["nickname"],
+        created_at=user["created_at"] or "",
     )
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(body: LoginRequest, db: SessionDep):
+async def login(
+    body: LoginRequest,
+    user_repo: UserRepository = Depends(get_user_repository),
+):
     """로그인."""
-    # TODO: DB에서 사용자 조회
-    # user = await get_user_by_email(db, body.email)
-    # if not user or not verify_password(body.password, user.password_hash):
-    #     raise UnauthorizedException("이메일 또는 비밀번호가 틀렸습니다.")
-
     logger.info(f"로그인 요청: {body.email}")
 
-    # 임시 토큰 생성
-    token = create_token({"sub": "temp-user-id"})
+    # 사용자 조회
+    user = await user_repo.find_by_email(body.email)
+
+    # 사용자 없거나 비밀번호 불일치
+    if not user or not verify_password(body.password, user["password_hash"]):
+        raise UnauthorizedException("이메일 또는 비밀번호가 틀렸습니다.")
+
+    # JWT 토큰 생성
+    token = create_token({"sub": user["id"], "email": user["email"]})
+
+    logger.info(f"로그인 성공: {body.email}")
 
     return TokenResponse(
         access_token=token,
         token_type="Bearer",
         user=UserResponse(
-            id="temp-id",
-            email=body.email,
-            nickname="여행자",
-            created_at="2026-07-21T00:00:00Z",
+            id=user["id"],
+            email=user["email"],
+            nickname=user["nickname"],
+            created_at=user["created_at"] or "",
         ),
     )
 
@@ -83,9 +110,21 @@ async def reset_password(token: str, new_password: str):
 
 
 @router.delete("/me")
-async def delete_account():
+async def delete_account(
+    user_id: str = Depends(get_current_user_id),
+    user_repo: UserRepository = Depends(get_user_repository),
+):
     """회원 탈퇴."""
-    # TODO: 사용자 soft delete
-    # user_id = 인증된 사용자 ID에서 가져오기
-    logger.info("회원 탈퇴 요청")
-    return {"message": "Account deleted successfully"}
+    logger.info(f"회원 탈퇴 요청: {user_id}")
+
+    from uuid import UUID
+
+    try:
+        await user_repo.soft_delete(UUID(user_id))
+        logger.info(f"회원 탈퇴 완료: {user_id}")
+        return {"message": "Account deleted successfully"}
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다.",
+        )

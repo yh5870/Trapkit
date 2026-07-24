@@ -11,12 +11,14 @@ from app.schemas.trip import (
     ChecklistItem,
     GenerateTripRequest,
     GenerateTripResponse,
+    ImportTripsRequest,
     Memo,
     TripDetailResponse,
     TripListResponse,
     TripSummary,
     UpdateTripRequest,
 )
+from app.schemas.trip import ImportTripsResponse
 from app.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -213,9 +215,91 @@ async def delete_memo(trip_id: str, memo_id: str, user: OptionalUserDep, db: Ses
     return {"message": "Memo deleted successfully"}
 
 
-@router.post("/import")
-async def import_trips(body: BaseModel, user: OptionalUserDep, db: SessionDep):
-    """비로그인 로컬 트립 이관."""
-    # TODO: 비로그인 트립을 사용자 계정으로 이관
-    logger.info("트립 이관 요청")
-    return {"message": "Trips imported successfully"}
+@router.post("/import", response_model=ImportTripsResponse)
+async def import_trips(
+    body: ImportTripsRequest,
+    user: OptionalUserDep,
+    db: SessionDep,
+):
+    """비로그인 로컬 트립 이관.
+
+    JSON 형식으로 여행 데이터를 받아 DB에 저장합니다.
+    """
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="로그인이 필요합니다.",
+        )
+
+    from uuid import uuid4
+    from app.domain.models.trip import Trip
+    from app.domain.models.item import Item, Memo
+    from app.domain.value_objects.trip_id import TripId
+    from infrastructure.database.dependencies import (
+        get_trip_repository,
+        get_item_repository,
+        get_memo_repository,
+    )
+
+    logger.info(f"트립 import 요청: {len(body.trips)}개, user_id={user.id}")
+
+    trip_repo = get_trip_repository(db)
+    item_repo = get_item_repository(db)
+    memo_repo = get_memo_repository(db)
+
+    imported_trip_ids = []
+
+    for trip_data in body.trips:
+        # Trip 도메인 엔티티 생성
+        trip = Trip.create(
+            title=trip_data.title,
+            destination=trip_data.destination,
+            purpose=trip_data.purpose,
+            user_id=user.id,
+            duration_nights=trip_data.duration_nights,
+            departure_month=trip_data.departure_month,
+            companions=trip_data.companions,
+        )
+
+        # cautions와 baggage_summary 업데이트
+        trip = trip.update(
+            cautions=[caution.model_dump() for caution in trip_data.cautions],
+            baggage_summary=trip_data.baggage_summary,
+        )
+
+        # Trip 저장
+        saved_trip = await trip_repo.save(trip)
+        imported_trip_ids.append(str(saved_trip.id.value))
+
+        # Categories (Items) 저장
+        for category in trip_data.categories:
+            for idx, item_data in enumerate(category.items):
+                item = Item.create(
+                    trip_id=saved_trip.id,
+                    category=category.name,
+                    name=item_data.name,
+                    quantity=item_data.quantity,
+                    tip=item_data.tip,
+                    baggage_flag=item_data.baggage_flag,
+                    source=item_data.source,
+                )
+                # sort_order 설정
+                item = item.update(sort_order=idx, checked=item_data.checked)
+                await item_repo.save(item)
+
+        # Memos 저장
+        for memo_data in trip_data.memos:
+            memo = Memo.create(
+                trip_id=saved_trip.id,
+                content=memo_data.content,
+            )
+            await memo_repo.save(memo)
+
+        logger.debug(f"Trip 저장 완료: {saved_trip.id.value}")
+
+    logger.info(f"트립 import 완료: {len(imported_trip_ids)}개")
+
+    return ImportTripsResponse(
+        imported_count=len(imported_trip_ids),
+        imported_trip_ids=imported_trip_ids,
+    )

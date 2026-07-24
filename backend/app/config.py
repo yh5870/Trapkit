@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     # AI
     GEMINI_API_KEY: str = Field(..., description="Google Gemini API 키")
-    GEMINI_MODEL: str = Field(default="gemini-1.5-flash", description="Gemini 모델")
+    GEMINI_MODEL: str = Field(default="gemini-3.5-flash", description="Gemini 모델")
     AI_MAX_TOKENS: int = 2000
     AI_CACHE_TTL: int = 86400  # 24시간
 
@@ -35,7 +35,10 @@ class Settings(BaseSettings):
     REDIS_URL: str | None = Field(None, description="Redis 연결 URL")
 
     # CORS
-    CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:3003",  # 프론트엔드 포트
+    ]
 
     # Environment
     ENVIRONMENT: str = "development"

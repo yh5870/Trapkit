@@ -8,8 +8,7 @@ import hashlib
 import json
 from typing import Any
 
-import google.generativeai as genai
-from google.generativeai.types import GenerationConfig
+from google import genai
 
 from app.application.commands.create_trip import CreateTripCommand
 from app.core.redis import cache_get, cache_set
@@ -18,7 +17,7 @@ from app.config import settings
 
 
 class GeminiClient(AIClient):
-    """Google Gemini AI 클라이언트."""
+    """Google Gemini AI 클라이언트 (google.genai 사용)."""
 
     def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
         """초기화.
@@ -30,15 +29,13 @@ class GeminiClient(AIClient):
         self.api_key = api_key or settings.GEMINI_API_KEY
         self.model = model or settings.GEMINI_MODEL
 
-        # Gemini 초기화
-        genai.configure(api_key=self.api_key)
-        self.client = genai.GenerativeModel(self.model)
+        # Gemini 클라이언트 초기화 (새 API)
+        self.client = genai.Client(api_key=self.api_key)
 
     async def generate_trip_content(self, command: CreateTripCommand) -> dict[str, Any]:
         """AI를 통해 트립 콘텐츠 생성.
 
         캐싱을 통해 비용 절감.
-        스트리밍 지원으로 실시간 응답 가능.
 
         Args:
             command: Trip 생성 Command
@@ -74,15 +71,14 @@ class GeminiClient(AIClient):
         # 2. 프롬프트 빌드
         prompt = self._build_prompt(command)
 
-        # 3. AI 생성
-        generation_config = GenerationConfig(
-            max_output_tokens=settings.AI_MAX_TOKENS,
-            temperature=0.7,
-        )
-
-        response = await self.client.generate_content_async(
-            prompt,
-            generation_config=generation_config,
+        # 3. AI 생성 (새 API 사용)
+        response = await self.client.aio.models.generate_content(
+            model=self.model,
+            contents=prompt,
+            config=genai.GenerateContentConfig(
+                max_output_tokens=settings.AI_MAX_TOKENS,
+                temperature=0.7,
+            ),
         )
 
         # 4. 결과 파싱
@@ -149,7 +145,7 @@ class GeminiClient(AIClient):
 다음 JSON 형식으로 응답해주세요:
 {
     "cautions": [
-        {"type": "weather|weather|health|safety|other", "message": "주의사항 내용"}
+        {"type": "weather|health|safety|other", "message": "주의사항 내용"}
     ],
     "baggage_summary": [
         {"category": "clothing|electronics|documents|other", "count": 개수}

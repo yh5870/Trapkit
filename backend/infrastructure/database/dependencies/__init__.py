@@ -1,49 +1,56 @@
 """Database Dependencies."""
 
+from typing import Annotated, TYPE_CHECKING
+
+from fastapi import Depends
+
 from .repositories import (
     TripRepositoryDep,
     get_trip_repository,
     ItemRepositoryDep,
     get_item_repository,
-    MemoRepositoryDep,
-    get_memo_repository,
+    BaggageRuleRepositoryDep,
+    get_baggage_rule_repository,
+    UserRepositoryDep,
+    get_user_repository,
 )
+
+if TYPE_CHECKING:
+    from infrastructure.external.redis_baggage_client import BaggageRuleCacheClient
 
 __all__ = [
     "TripRepositoryDep",
     "get_trip_repository",
     "ItemRepositoryDep",
     "get_item_repository",
-    "MemoRepositoryDep",
-    "get_memo_repository",
+    "BaggageRuleRepositoryDep",
+    "get_baggage_rule_repository",
+    "UserRepositoryDep",
+    "get_user_repository",
+    "BaggageCacheClientDep",
 ]
 
-# 수화물 규정 캐시 클라이언트 (외부 의존성 주입)
-BaggageCacheClientDep: None
 
-
-def get_baggage_cache_client() -> "BaggageCacheClientDep":
-    """수화물 규정 캐시 클라이언트 의존성 주입 (Lazily 초기화)
+def get_baggage_cache_client() -> "BaggageRuleCacheClient":
+    """수화물 규정 캐시 클라이언트 싱글톤 반환 (FastAPI 의존성 주입)
 
     Returns:
-        의존성 주입 함수
+        BaggageRuleCacheClient 인스턴스
 
     Use case:
-        @router.get("/api/v1/baggage/check")
+        ```python
+        @router.post("/check")
         async def check_baggage(
-            cache_client: BaggageCacheClient = Depends(get_baggage_cache_client),
+            cache_client: BaggageCacheClientDep,
             ...
         ):
-            rule = await cache_client.get_cached_rule(...)
+            rule = await cache_client.get_cached_rule("korean air", "맥북")
+        ```
     """
-    async def _lazy_init() -> BaggageCacheClientDep:
-        from infrastructure.external.redis_baggage_client import BaggageCacheClient
+    from infrastructure.external.redis_baggage_client import get_baggage_cache_client as _get_cache_client
 
-        # 싱글톤 패턴으로 전역 변수 할당
-        import infrastructure.external.redis_baggage_client as module
-        global BaggageCacheClientDep
-        if BaggageCacheClientDep is None:
-            BaggageCacheClientDep = module.BaggageRuleCacheClient()
-        return BaggageCacheClientDep
+    return _get_cache_client()
 
-    return _lazy_init()
+
+# 타입 별칭 (코드 가독성 향상)
+BaggageCacheClientDep = Annotated["BaggageRuleCacheClient", Depends(get_baggage_cache_client)]

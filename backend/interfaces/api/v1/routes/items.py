@@ -20,6 +20,7 @@ from app.domain.value_objects.item_id import ItemId
 from app.domain.value_objects.trip_id import TripId
 from app.utils.logger import setup_logger
 from infrastructure.database.dependencies import get_item_repository, get_trip_repository
+from interfaces.api.dependencies.auth import get_current_user_id
 from shared.config.database import get_db
 
 logger = setup_logger(__name__)
@@ -37,7 +38,7 @@ def _format_sse_event(data: dict[str, Any], event_type: str = "message") -> str:
 @router.get("/{trip_id}")
 async def get_items_by_trip_id(
     trip_id: str,
-    user_id: str,
+    user_id: str = Depends(get_current_user_id),
     item_repo: get_item_repository = Depends(get_item_repository),
     trip_repo: get_trip_repository = Depends(get_trip_repository),
     db: AsyncSession = Depends(get_db),
@@ -116,7 +117,7 @@ async def get_items_by_trip_id(
 @router.post("")
 async def create_item(
     request_data: AddItemCommand,
-    user_id: str,
+    user_id: str = Depends(get_current_user_id),
     trip_repo: get_trip_repository = Depends(get_trip_repository),
     item_repo: get_item_repository = Depends(get_item_repository),
     db: AsyncSession = Depends(get_db),
@@ -200,7 +201,7 @@ async def create_item(
 async def update_item(
     item_id: str,
     request_data: UpdateItemCommand,
-    user_id: str,
+    user_id: str = Depends(get_current_user_id),
     item_repo: get_item_repository = Depends(get_item_repository),
     trip_repo: get_trip_repository = Depends(get_trip_repository),
     db: AsyncSession = Depends(get_db),
@@ -283,7 +284,7 @@ async def update_item(
 @router.delete("/{item_id}")
 async def delete_item(
     item_id: str,
-    user_id: str,
+    user_id: str = Depends(get_current_user_id),
     item_repo: get_item_repository = Depends(get_item_repository),
     trip_repo: get_trip_repository = Depends(get_trip_repository),
     db: AsyncSession = Depends(get_db),
@@ -343,7 +344,7 @@ async def delete_item(
 async def check_item(
     item_id: str,
     command: CheckItemCommand,
-    user_id: str,
+    user_id: str = Depends(get_current_user_id),
     item_repo: get_item_repository = Depends(get_item_repository),
     trip_repo: get_trip_repository = Depends(get_trip_repository),
     db: AsyncSession = Depends(get_db),
@@ -424,7 +425,7 @@ async def check_item(
 async def update_sort_order(
     item_id: str,
     command: UpdateSortOrderCommand,
-    user_id: str,
+    user_id: str = Depends(get_current_user_id),
     item_repo: get_item_repository = Depends(get_item_repository),
     trip_repo: get_trip_repository = Depends(get_trip_repository),
     db: AsyncSession = Depends(get_db),

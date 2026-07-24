@@ -4,6 +4,7 @@
 FastAPI의 의존성 주입(DI)을 통해 요청마다 독립된 DB 세션을 제공합니다.
 """
 
+import ssl
 from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -30,6 +31,19 @@ if "postgresql" in _db_url:
         "pool_pre_ping": True,
         "pool_size": 10,
         "max_overflow": 20,
+    })
+
+# Supabase는 SSL 필수 (인증서 검증 비활성화)
+if "supabase.co" in _db_url:
+    # 인증서 검증 비활성화 SSL 컨텍스트 생성
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+
+    engine_kwargs.update({
+        "connect_args": {
+            "ssl": ssl_context,
+        }
     })
 
 engine = create_async_engine(_db_url, **engine_kwargs)

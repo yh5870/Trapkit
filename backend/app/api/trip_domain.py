@@ -8,7 +8,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies import UserDep
 from app.application.services.trip_query_service import TripQueryService
 from app.domain.models.trip import Trip
 from app.domain.repositories.trip_repository import TripRepository
@@ -21,6 +20,7 @@ from app.schemas.trip_domain import (
 )
 from app.utils.logger import setup_logger
 from infrastructure.database.dependencies import get_trip_repository
+from interfaces.api.dependencies.auth import get_current_user_id
 from shared.config.database import get_db
 
 logger = setup_logger(__name__)
