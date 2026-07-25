@@ -32,8 +32,8 @@ type Caution = {
 };
 
 type BaggageAlert = {
-  item: string;
-  rule: string;
+  category: string;
+  count: number;
 };
 
 // 아이템을 카테고리별로 정리하는 함수
@@ -398,11 +398,11 @@ export default function Trip() {
             </h2>
             {baggageSummary.map((item) => (
               <button
-                key={item.item}
-                onClick={() => router.push(`/baggage?item=${encodeURIComponent(item.item)}`)}
+                key={item.category}
+                onClick={() => router.push(`/baggage?item=${encodeURIComponent(item.category)}`)}
               >
-                <strong>{item.item}</strong>
-                <span>{item.rule}</span>
+                <strong>{item.category}</strong>
+                <span>{item.count}</span>
                 <b>→</b>
               </button>
             ))}

@@ -33,7 +33,7 @@ export interface Trip {
   departure_month: number | null;
   companions: string | null;
   cautions: Array<{ category: string; text: string }>;
-  baggage_summary: Array<{ item: string; rule: string }>;
+  baggage_summary: Array<{ category: string; count: number }>;
   created_at: string;
   updated_at: string;
   items_count?: number;
