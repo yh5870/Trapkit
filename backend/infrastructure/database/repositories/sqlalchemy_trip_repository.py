@@ -4,6 +4,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.domain.models.trip import Trip
 from app.domain.repositories.trip_repository import TripRepository
@@ -68,7 +69,9 @@ class SQLAlchemyTripRepository(TripRepository):
             Trip 엔티티 또는 None
         """
         result = await self.session.execute(
-            select(TripModel).where(TripModel.id == str(trip_id.value))
+            select(TripModel)
+            .options(selectinload(TripModel.items))
+            .where(TripModel.id == str(trip_id.value))
         )
         model = result.scalar_one_or_none()
 
@@ -85,6 +88,7 @@ class SQLAlchemyTripRepository(TripRepository):
         """
         result = await self.session.execute(
             select(TripModel)
+            .options(selectinload(TripModel.items))
             .where(TripModel.user_id == user_id)
             .order_by(TripModel.created_at.desc())
         )

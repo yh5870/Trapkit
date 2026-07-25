@@ -44,7 +44,7 @@ async def get_memos_by_trip_id(
     memo_repo = Depends(get_memo_repository),
     trip_repo = Depends(get_trip_repository),
     db: AsyncSession = Depends(get_db),
-) -> dict[str, list[dict]]:
+) -> dict:
     """Trip ID로 모든 Memo 조회 (생성일 내림차순).
 
     Args:

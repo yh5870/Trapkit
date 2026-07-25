@@ -1,12 +1,16 @@
 """Trip ORM Model."""
 
 from datetime import datetime
+from typing import TYPE_CHECKING, List
 from uuid import UUID
 
 from sqlalchemy import DateTime, JSON, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from shared.config.database import Base
+
+if TYPE_CHECKING:
+    from infrastructure.database.models.item_model import ItemModel
 
 
 class TripModel(Base):
@@ -55,7 +59,9 @@ class TripModel(Base):
         nullable=False,
     )
 
-    # Relationships (추후 Item, Memo 추가 시)
-    # items = relationship("ItemModel", back_populates="trip", cascade="all, delete-orphan")
-    # memos = relationship("MemoModel", back_populates="trip", cascade="all, delete-orphan")
-    # user = relationship("ProfileModel", back_populates="trips")
+    # 🟢 순환 참조를 방지하도록 relationship 작성
+    items: Mapped[List["ItemModel"]] = relationship(
+        "ItemModel", 
+        back_populates="trip", 
+        cascade="all, delete-orphan"
+    )

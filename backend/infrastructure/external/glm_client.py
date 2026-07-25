@@ -198,7 +198,7 @@ class GLMClient(AIClient):
 다음 JSON 형식으로 응답해주세요:
 {
     "cautions": [
-        {"type": "weather|health|safety|other", "message": "주의사항 내용"}
+        {"category": "weather|health|safety|other", "text": "주의사항 내용", "confidence": "stable|check_required"}
     ],
     "items": [
         {
@@ -251,6 +251,16 @@ JSON만 응답해주세요. 다른 텍스트는 포함하지 마세요."""
         # 필수 필드 확인
         if "cautions" not in content:
             content["cautions"] = []
+
+        # cautions 필드명 정규화 (구형 type/message 응답 대응)
+        normalized_cautions = []
+        for c in content["cautions"]:
+            normalized_cautions.append({
+                "category": c.get("category", c.get("type", "other")),
+                "text": c.get("text", c.get("message", "")),
+                "confidence": c.get("confidence", "stable"),
+            })
+        content["cautions"] = normalized_cautions
 
         # items가 없으면 빈 리스트
         if "items" not in content:

@@ -1,12 +1,16 @@
 """Item ORM Model."""
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import Boolean, DateTime, String, Integer, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from shared.config.database import Base
+
+if TYPE_CHECKING:
+    from infrastructure.database.models.trip_model import TripModel
 
 
 class ItemModel(Base):
@@ -27,6 +31,7 @@ class ItemModel(Base):
     # Foreign Key
     trip_id: Mapped[str] = mapped_column(
         String(36),
+        ForeignKey("trips.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -38,17 +43,13 @@ class ItemModel(Base):
     tip: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # Baggage Flags
-    # carry_on_only: 기내 반입만 가능
-    # checked_only: 수화물로만 가능
-    # restricted: 반입 제한
-    # null: 제한 없음
     baggage_flag: Mapped[str | None] = mapped_column(
         String(50),
         nullable=True,
         index=True,
     )
 
-    # Source: "ai" (AI 생성) 또는 "user" (사용자 직접 추가)
+    # Source
     source: Mapped[str] = mapped_column(
         String(50),
         nullable=False,
@@ -84,5 +85,5 @@ class ItemModel(Base):
         nullable=False,
     )
 
-    # Relationships
-    # trip = relationship("TripModel", back_populates="items")
+    # 🟢 순환 참조를 방지하도록 relationship 작성
+    trip: Mapped["TripModel"] = relationship("TripModel", back_populates="items")
