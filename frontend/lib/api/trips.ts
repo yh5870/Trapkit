@@ -40,46 +40,48 @@ export interface Trip {
 }
 
 export interface SSEMessage {
-  status: 'started' | 'generating' | 'content_generated' | 'creating_entity' | 'saving' | 'creating_items' | 'completed' | 'error';
+  status:
+    | 'started'
+    | 'generating'
+    | 'content_generated'
+    | 'creating_entity'
+    | 'saving'
+    | 'creating_items'
+    | 'completed'
+    | 'error';
   message?: string;
   content?: unknown;
   trip?: Trip;
   [key: string]: unknown;
 }
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 /**
- * 여행 리스트 생성 (SSE 스트리밍)
+ * 여행 리스트 생성 (GET - EventSource)
+ * Note: 표준 EventSource는 Authorization 헤더를 직접 설정할 수 없으므로,
+ * 토큰이 필요한 경우 쿼리 파라미터로 넘기거나 generateTripWithStream을 권장합니다.
  */
 export function generateTripStream(
   request: TripGenerateRequest,
   accessToken?: string
 ): EventSource {
-  // 개발용 엔드포인트는 POST body를 사용하지만 EventSource는 GET만 지원
-  // 임시로 쿼리 파라미터 버전 사용
-  const url = new URL(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/trips/generate`);
+  const url = new URL(`${API_BASE_URL}/api/v1/trips/generate`);
 
-  if (request.destination) {
-    url.searchParams.set('destination', request.destination);
-  }
-  if (request.purpose && request.purpose.length > 0) {
-    url.searchParams.set('purpose', request.purpose.join(','));
-  }
-  if (request.duration_nights) {
-    url.searchParams.set('duration_nights', String(request.duration_nights));
-  }
-  if (request.departure_month) {
-    url.searchParams.set('departure_month', String(request.departure_month));
-  }
-  if (request.companions) {
-    url.searchParams.set('companions', request.companions);
-  }
+  if (request.destination) url.searchParams.set('destination', request.destination);
+  if (request.purpose?.length) url.searchParams.set('purpose', request.purpose.join(','));
+  if (request.duration_nights) url.searchParams.set('duration_nights', String(request.duration_nights));
+  if (request.departure_month) url.searchParams.set('departure_month', String(request.departure_month));
+  if (request.companions) url.searchParams.set('companions', request.companions);
+  
+  // EventSource용 토큰 전달 (쿼리스트링 방식)
+  if (accessToken) url.searchParams.set('token', accessToken);
 
   return new EventSource(url.toString());
 }
 
 /**
- * 여행 리스트 생성 (POST Body) - SSE 스트림 처리
- * Note: EventSource는 GET만 지원하므로 fetch 스트리밍 사용
+ * 여행 리스트 생성 (POST Body) - Fetch ReadableStream 기반 SSE 처리
  */
 export async function generateTripWithStream(
   request: TripGenerateRequest,
@@ -88,15 +90,14 @@ export async function generateTripWithStream(
   onComplete?: (trip: Trip) => void,
   onError?: (error: string) => void
 ): Promise<void> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-  const url = `${apiUrl}/api/v1/trips/generate/body/dev`;
+  const url = `${API_BASE_URL}/api/v1/trips/generate/body/dev`;
 
   try {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
+        ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
       },
       body: JSON.stringify(request),
     });
@@ -106,10 +107,10 @@ export async function generateTripWithStream(
       throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
     }
 
-    // SSE 스트림 처리
+
     const reader = response.body?.getReader();
     if (!reader) {
-      throw new Error('No response body reader');
+      throw new Error('No response body reader available');
     }
 
     const decoder = new TextDecoder();
@@ -121,11 +122,16 @@ export async function generateTripWithStream(
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
+      
+      // 불완전한 마지막 줄은 버퍼에 남겨둠
       buffer = lines.pop() || '';
 
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = line.slice(6);
+      for (const rawLine of lines) {
+        const line = rawLine.trim(); // \r 및 여백 정리
+        if (line.startsWith('data:')) {
+          const data = line.slice(5).trim();
+          if (!data) continue;
+
           try {
             const message = JSON.parse(data) as SSEMessage;
             if (onMessage) onMessage(message);
@@ -133,17 +139,18 @@ export async function generateTripWithStream(
             if (message.status === 'completed' && message.trip && onComplete) {
               onComplete(message.trip);
             } else if (message.status === 'error' && onError) {
-              onError(message.message || 'Unknown error');
+              onError(message.message || 'Unknown server error');
             }
           } catch (e) {
-            console.error('Failed to parse SSE data:', data, e);
+            console.error('Failed to parse SSE JSON:', data, e);
           }
         }
       }
     }
   } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown network error';
     if (onError) {
-      onError(error instanceof Error ? error.message : 'Unknown error');
+      onError(errorMsg);
     }
     throw error;
   }
@@ -212,9 +219,10 @@ export async function getUserTrips(accessToken?: string): Promise<Trip[]> {
  * Trip ID로 상세 조회
  */
 export async function getTripById(tripId: string, accessToken?: string): Promise<Trip> {
-  const response = await apiGet<{ trip: Trip }>(
+  // 백엔드 API가 { trip: ... } 형태가 아닌 Trip 객체 단일을 직접 반환하므로 apiGet<Trip> 사용
+  const response = await apiGet<Trip>(
     `/api/v1/trips/${tripId}`,
     accessToken
   );
-  return response.trip;
+  return response;
 }

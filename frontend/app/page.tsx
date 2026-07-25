@@ -7,19 +7,28 @@ import Loading from "@/components/Loading";
 import Toast from "@/components/Toast";
 import Plane from "@/components/Plane";
 import * as api from "@/lib/api";
-import { useAuth } from "@/lib/api/auth";
+import { useAuth } from "@/lib/api/auth"; // 👈 외부 모듈에서 가져온 useAuth
 
 export default function Home() {
   const router = useRouter();
-  const [loggedIn] = useAuth();
+  const [loggedIn] = useAuth(); // 👈 import 한 useAuth 사용
+  
   const [destination, setDestination] = useState("");
+  
   useEffect(() => {
     console.log("token:", api.getAccessToken());
     console.log("isAuthenticated:", api.isAuthenticated());
     console.log("loggedIn:", loggedIn);
   }, [loggedIn]);
+
   const [purposes, setPurposes] = useState<string[]>([]);
   const [optional, setOptional] = useState(false);
+  
+  // 👇 이전 에러를 해결했던 3가지 상태(State) 복구
+  const [duration, setDuration] = useState("4박 5일");
+  const [month, setMonth] = useState("2026-12");
+  const [companions, setCompanions] = useState("친구");
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [customPurpose, setCustomPurpose] = useState("");
@@ -56,13 +65,32 @@ export default function Home() {
     if (!destination.trim()) return setError("목적지를 입력해 주세요.");
     setError(""); setLoading(true);
     sessionStorage.setItem("tripkit-destination", destination.trim());
+    
     try {
       const finalPurposes = purposes.length > 0 ? purposes : (customPurpose.trim() ? [customPurpose.trim()] : ["관광"]);
+
+      // 👇 백엔드로 넘길 데이터 가공 로직 복구
+      let duration_nights = 0;
+      let departure_month = 0;
+      
+      if (optional) {
+        if (duration !== "직접 입력") {
+          duration_nights = parseInt(duration.split("박")[0], 10); 
+        }
+        if (month) {
+          departure_month = parseInt(month.split("-")[1], 10);
+        }
+      }
 
       await api.generateTripWithStream(
         {
           destination: destination.trim(),
-          purpose: finalPurposes
+          purpose: finalPurposes,
+          ...(optional && {
+            duration_nights: duration_nights,
+            departure_month: departure_month,
+            companions: companions
+          })
         },
         api.getAccessToken() || undefined,
         (message) => {
@@ -149,10 +177,12 @@ export default function Home() {
           >
             <span>{optional ? "−" : "+"}</span> 기간 · 출발 시기 · 동행 입력 <small>선택</small>
           </button>
+          
           {optional && (
             <div className="optional-grid">
+              {/* 👇 옵션 필드 상태 연결 복구 */}
               <label>{homeData.view.optionalFields.durationLabel}
-                <select defaultValue="4박 5일">
+                <select value={duration} onChange={(e) => setDuration(e.target.value)}>
                   <option>2박 3일</option>
                   <option>3박 4일</option>
                   <option>4박 5일</option>
@@ -160,10 +190,10 @@ export default function Home() {
                 </select>
               </label>
               <label>{homeData.view.optionalFields.monthLabel}
-                <input type="month" defaultValue="2026-12" />
+                <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
               </label>
               <label>동행
-                <select defaultValue="친구">
+                <select value={companions} onChange={(e) => setCompanions(e.target.value)}>
                   <option>혼자</option>
                   <option>커플</option>
                   <option>친구</option>
@@ -172,6 +202,7 @@ export default function Home() {
               </label>
             </div>
           )}
+          
           <button className="primary cta" type="submit">
             <span>내 여행 리스트 만들기</span><span aria-hidden="true">→</span>
           </button>

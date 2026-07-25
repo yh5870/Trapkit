@@ -28,6 +28,7 @@ type Category = {
 type Caution = {
   category: string;
   text: string;
+  item?: string;
 };
 
 type BaggageAlert = {
@@ -101,9 +102,11 @@ export default function Trip() {
       try {
         setTripId(storedTripId);
 
-        // Trip 정보 가져오기
+        // Trip 정보 가져오기 
         const trip = await api.getTripById(storedTripId, api.getAccessToken() || undefined);
         setTitle(storedTitle || trip.title);
+
+        if (!trip) return;
 
         // 메타 정보 생성
         const duration = trip.duration_nights ? `${trip.duration_nights}박 ${trip.duration_nights + 1}일` : "";
@@ -409,13 +412,15 @@ export default function Trip() {
 
       {tab === "주의사항" && (
         <section className="caution-grid">
-          {cautions.map((caution) => (
-            <article key={`${caution.category}-${caution.text}`}>
+          {cautions.map((caution, index) => (
+            // 💡 index를 결합하여 키 중복(undefined-undefined)을 원천 차단합니다.
+            <article key={`caution-${index}`}>
               <div>
-                <span>{caution.category}</span>
+                {/* API 데이터 구조에 맞춰 안전하게 출력 */}
+                <span>{caution.category || "주의사항"}</span>
                 <em>출발 전 확인</em>
               </div>
-              <p>{caution.text}</p>
+              <p>{caution.text || caution.item || "내용이 없습니다."}</p>
             </article>
           ))}
           <div className="notice">
