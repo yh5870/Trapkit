@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import auth, health, trips, trip_domain
-from interfaces.api.v1.routes import baggage, items
+from interfaces.api.v1.routes import baggage, items, memos
 from app.config import settings
 from app.core.database import init_db, close_db
 from app.utils.logger import setup_logger
@@ -51,6 +51,7 @@ app.include_router(trip_domain.router, prefix="/api/v1/trips", tags=["Trips V1 (
 app.include_router(streaming_trips.router, prefix="/api/v1/trips", tags=["Trips V1 (Streaming)"])
 app.include_router(baggage.router, prefix="/api/v1", tags=["Baggage"])
 app.include_router(items.router, prefix="/api/v1/items", tags=["Items"])
+app.include_router(memos.router, prefix="/api/v1/memos", tags=["Memos"])
 
 
 @app.get("/")

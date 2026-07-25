@@ -57,7 +57,7 @@ class Trip:
         departure_month: int | None = None,
         companions: str | None = None,
         cautions: list[dict] | None = None,
-        baggage_summary: dict | None = None,
+        baggage_summary: list[dict] | None = None,
     ) -> Self:
         """Trip 업데이트."""
         return Trip(

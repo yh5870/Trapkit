@@ -25,9 +25,11 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7일
 
-    # AI
-    GEMINI_API_KEY: str = Field(..., description="Google Gemini API 키")
-    GEMINI_MODEL: str = Field(default="gemini-3.5-flash", description="Gemini 모델")
+    # AI (선택사항 - 없으면 임시 응답 반환)
+    GEMINI_API_KEY: str | None = Field(None, description="Google Gemini API 키")
+    GEMINI_MODEL: str = "gemini-1.5-flash"
+    GLM_API_KEY: str | None = Field(None, description="智谱AI GLM API 키")
+    GLM_MODEL: str = "glm-4"
     AI_MAX_TOKENS: int = 2000
     AI_CACHE_TTL: int = 86400  # 24시간
 

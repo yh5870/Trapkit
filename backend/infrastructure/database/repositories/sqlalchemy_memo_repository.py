@@ -1,14 +1,10 @@
 """SQLAlchemy Memo Repository Implementation."""
 
-from uuid import UUID
-
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.models.item import Memo
+from app.models.trip import Memo
 from app.domain.repositories.memo_repository import MemoRepository
-from app.domain.value_objects.memo_id import MemoId
-from app.domain.value_objects.trip_id import TripId
 from infrastructure.database.models.memo_model import MemoModel
 
 
@@ -36,7 +32,7 @@ class SQLAlchemyMemoRepository(MemoRepository):
 
         # 이미 존재하는지 확인
         existing = await self.session.execute(
-            select(MemoModel).where(MemoModel.id == str(memo.id.value))
+            select(MemoModel).where(MemoModel.id == memo.id)
         )
         existing_model = existing.scalar_one_or_none()
         if existing_model:
@@ -53,7 +49,7 @@ class SQLAlchemyMemoRepository(MemoRepository):
 
         return self._to_domain(model)
 
-    async def find_by_id(self, memo_id: MemoId) -> Memo | None:
+    async def find_by_id(self, memo_id: str) -> Memo | None:
         """ID로 Memo 조회.
 
         Args:
@@ -63,13 +59,13 @@ class SQLAlchemyMemoRepository(MemoRepository):
             Memo 엔티티 또는 None
         """
         result = await self.session.execute(
-            select(MemoModel).where(MemoModel.id == str(memo_id.value))
+            select(MemoModel).where(MemoModel.id == memo_id)
         )
         model = result.scalar_one_or_none()
 
         return self._to_domain(model) if model else None
 
-    async def find_by_trip_id(self, trip_id: TripId) -> list[Memo]:
+    async def find_by_trip_id(self, trip_id: str) -> list[Memo]:
         """Trip ID로 모든 Memo 조회 (생성일 내림차순).
 
         Args:
@@ -80,21 +76,21 @@ class SQLAlchemyMemoRepository(MemoRepository):
         """
         result = await self.session.execute(
             select(MemoModel)
-            .where(MemoModel.trip_id == str(trip_id.value))
+            .where(MemoModel.trip_id == trip_id)
             .order_by(MemoModel.created_at.desc())
         )
         models = result.scalars().all()
 
         return [self._to_domain(model) for model in models]
 
-    async def delete(self, memo_id: MemoId) -> None:
+    async def delete(self, memo_id: str) -> None:
         """Memo 삭제.
 
         Args:
             memo_id: 삭제할 Memo ID
         """
         result = await self.session.execute(
-            select(MemoModel).where(MemoModel.id == str(memo_id.value))
+            select(MemoModel).where(MemoModel.id == memo_id)
         )
         model = result.scalar_one_or_none()
 
@@ -102,14 +98,14 @@ class SQLAlchemyMemoRepository(MemoRepository):
             await self.session.delete(model)
             await self.session.commit()
 
-    async def delete_by_trip_id(self, trip_id: TripId) -> None:
+    async def delete_by_trip_id(self, trip_id: str) -> None:
         """Trip ID로 모든 Memo 삭제 (Trip 삭제 시).
 
         Args:
             trip_id: Trip ID
         """
         result = await self.session.execute(
-            select(MemoModel).where(MemoModel.trip_id == str(trip_id.value))
+            select(MemoModel).where(MemoModel.trip_id == trip_id)
         )
         models = result.scalars().all()
 
@@ -118,7 +114,7 @@ class SQLAlchemyMemoRepository(MemoRepository):
 
         await self.session.commit()
 
-    async def get_count(self, trip_id: TripId) -> int:
+    async def get_count(self, trip_id: str) -> int:
         """Trip ID로 Memo 수 조회.
 
         Args:
@@ -130,7 +126,7 @@ class SQLAlchemyMemoRepository(MemoRepository):
         result = await self.session.execute(
             select(func.count())
             .select_from(MemoModel)
-            .where(MemoModel.trip_id == str(trip_id.value))
+            .where(MemoModel.trip_id == trip_id)
         )
         count = result.scalar_one()
 
@@ -146,8 +142,8 @@ class SQLAlchemyMemoRepository(MemoRepository):
             Memo 도메인 엔티티
         """
         return Memo(
-            id=MemoId(value=UUID(model.id)),
-            trip_id=TripId(value=UUID(model.trip_id)),
+            id=model.id,
+            trip_id=model.trip_id,
             content=model.content,
             created_at=model.created_at,
             updated_at=model.updated_at,
@@ -163,7 +159,7 @@ class SQLAlchemyMemoRepository(MemoRepository):
             MemoModel ORM 인스턴스
         """
         return MemoModel(
-            id=str(memo.id.value),
-            trip_id=str(memo.trip_id.value),
+            id=memo.id,
+            trip_id=memo.trip_id,
             content=memo.content,
         )

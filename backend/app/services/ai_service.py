@@ -10,8 +10,10 @@ class AIService:
     """AI 서비스."""
 
     def __init__(self) -> None:
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        self.model = genai.GenerativeModel(settings.GEMINI_MODEL)
+        self.model = None
+        if settings.GEMINI_API_KEY:
+            genai.configure(api_key=settings.GEMINI_API_KEY)
+            self.model = genai.GenerativeModel(settings.GEMINI_MODEL)
 
     async def generate_trip_list(self, prompt: dict) -> AITripResponse:
         """AI 리스트 생성."""

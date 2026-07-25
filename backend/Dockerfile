@@ -6,14 +6,17 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 앱 코드 복사
+# 전체 코드 복사 (app, interfaces, infrastructure, shared)
 COPY app ./app
-COPY pyproject.toml .
+COPY interfaces ./interfaces
+COPY infrastructure ./infrastructure
+COPY shared ./shared
 COPY alembic.ini .
 COPY alembic ./alembic
+COPY pyproject.toml .
 
-# 비밀번호 파일 생성 (Alembic용)
-RUN mkdir -p /app/alembic/versions && touch /app/.env
+# Python 경로 설정
+ENV PYTHONPATH="/app:$PYTHONPATH"
 
 # 포트 노출
 EXPOSE 8000

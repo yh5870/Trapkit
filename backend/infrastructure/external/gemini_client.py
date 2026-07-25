@@ -4,16 +4,22 @@ Google Gemini API를 통한 트립 콘텐츠 생성.
 AIClient 인터페이스를 구현하여 도메인 서비스와 AI 인프라를 분리.
 """
 
+import asyncio
 import hashlib
 import json
+import logging
 from typing import Any
 
 from google import genai
+from google.genai import types
+from google.genai.errors import ClientError
 
 from app.application.commands.create_trip import CreateTripCommand
 from app.core.redis import cache_get, cache_set
 from app.domain.services.trip_generation_service import AIClient
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class GeminiClient(AIClient):
@@ -31,6 +37,55 @@ class GeminiClient(AIClient):
 
         # Gemini 클라이언트 초기화 (새 API)
         self.client = genai.Client(api_key=self.api_key)
+        self.max_retries = 3
+        self.initial_backoff = 40  # seconds
+
+    async def _generate_with_retry(self, prompt: str) -> Any:
+        """AI 생성 요청을 지수 백오프로 재시도.
+
+        Args:
+            prompt: 프롬프트
+
+        Returns:
+            AI 응답
+
+        Raises:
+            ClientError: 모든 재시도 실패 시
+        """
+        backoff = self.initial_backoff
+
+        for attempt in range(self.max_retries):
+            try:
+                return await self.client.aio.models.generate_content(
+                    model=self.model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        max_output_tokens=settings.AI_MAX_TOKENS,
+                        temperature=0.7,
+                    ),
+                )
+            except ClientError as e:
+                if e.code == 429:
+                    # 할당량 초과 - 재시도 무의미하므로 즉시 에러 반환
+                    logger.error("Gemini API quota exceeded (할당량 초과)")
+                    raise ClientError(
+                        429,
+                        {"error": {"message": "API 할당량이 초과되었습니다. 잠시 후 다시 시도해주세요."}}
+                    )
+                else:
+                    # 기타 에러 - 재시도
+                    if attempt < self.max_retries - 1:
+                        logger.warning(
+                            f"Gemini API error (attempt {attempt + 1}/{self.max_retries}): {e}. Retrying in {backoff}s..."
+                        )
+                        await asyncio.sleep(backoff)
+                        backoff *= 2  # Exponential backoff
+                        continue
+                    else:
+                        logger.error(f"Gemini API error after {self.max_retries} attempts: {e}")
+                        raise
+
+        raise ClientError(429, {"error": {"message": "Max retries exceeded for quota limit"}})
 
     async def generate_trip_content(self, command: CreateTripCommand) -> dict[str, Any]:
         """AI를 통해 트립 콘텐츠 생성.
@@ -71,15 +126,8 @@ class GeminiClient(AIClient):
         # 2. 프롬프트 빌드
         prompt = self._build_prompt(command)
 
-        # 3. AI 생성 (새 API 사용)
-        response = await self.client.aio.models.generate_content(
-            model=self.model,
-            contents=prompt,
-            config=genai.GenerateContentConfig(
-                max_output_tokens=settings.AI_MAX_TOKENS,
-                temperature=0.7,
-            ),
-        )
+        # 3. AI 생성 (새 API 사용, 재시도 로직 포함)
+        response = await self._generate_with_retry(prompt)
 
         # 4. 결과 파싱
         content = self._parse_response(response.text)
@@ -125,7 +173,7 @@ class GeminiClient(AIClient):
             프롬프트 문자열
         """
         # 기본 프롬프트
-        prompt = f"""여행 '{command.destination}'에 대한 주의사항과 수화물 리스트를 생성해주세요.
+        prompt = f"""여행 '{command.destination}'에 대한 주의사항과 체크리스트를 생성해주세요.
 
 여행 목적: {', '.join(command.purpose)}"""
 
@@ -147,12 +195,19 @@ class GeminiClient(AIClient):
     "cautions": [
         {"type": "weather|health|safety|other", "message": "주의사항 내용"}
     ],
-    "baggage_summary": [
-        {"category": "clothing|electronics|documents|other", "count": 개수}
+    "items": [
+        {
+            "category": "카테고리명 (예: 옷, 전자기기, 필수품)",
+            "name": "아이템명",
+            "quantity": 수량 (기본 1)",
+            "tip": "팁 (선택적, null 또는 팁 내용)",
+            "baggage_flag": true/false
+        }
     ]
 }
 
-주의사항은 최대 5개, 수화물 카테고리는 최대 10개로 해주세요.
+카테고리 예시: 옷, 전자기기, 필수품, 화장품, 위생용품, 약품, 문서, 기타
+아이템은 총 15-20개로, 여행지와 목적에 맞는 실용적인 것들만 선택해주세요.
 JSON만 응답해주세요. 다른 텍스트는 포함하지 마세요."""
 
         return prompt
@@ -192,7 +247,21 @@ JSON만 응답해주세요. 다른 텍스트는 포함하지 마세요."""
         if "cautions" not in content:
             content["cautions"] = []
 
-        if "baggage_summary" not in content:
-            content["baggage_summary"] = []
+        # items가 없으면 빈 리스트
+        if "items" not in content:
+            content["items"] = []
+
+        # 호환성: baggage_summary가 없으면 items로부터 생성
+        if "baggage_summary" not in content and content.get("items"):
+            # items에서 카테고리별 카운트 계산
+            category_counts: dict[str, int] = {}
+            for item in content["items"]:
+                category = item.get("category", "기타")
+                category_counts[category] = category_counts.get(category, 0) + 1
+
+            content["baggage_summary"] = [
+                {"category": cat, "count": count}
+                for cat, count in category_counts.items()
+            ]
 
         return content

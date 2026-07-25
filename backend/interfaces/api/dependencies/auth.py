@@ -100,37 +100,20 @@ async def get_current_user_id(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-
 async def get_optional_user_id(
     authorization: str | None = Header(None)
 ) -> str | None:
     """선택적 사용자 ID 반환.
 
-    인증이 필요 없는 엔드포인트에서 사용됩니다.
-    토큰이 있으면 user_id 반환, 없으면 None 반환.
-
-    Args:
-        authorization: Authorization 헤더 값 (Bearer {token})
-
-    Returns:
-        str | None: 사용자 ID 또는 None
-
-    Example:
-        ```python
-        @router.get("/public/trips")
-        async def get_public_trips(
-            user_id: str | None = Depends(get_optional_user_id)
-        ):
-            if user_id:
-                # 개인화된 결과
-                return await service.get_personalized_trips(user_id)
-            else:
-                # 공개 결과
-                return await service.get_public_trips()
-        ```
+    토큰이 없으면 None,
+    토큰이 있으면 JWT에서 실제 user_id(sub)를 추출합니다.
     """
+
     if not authorization:
         return None
 
-    # Mock: 항상 같은 사용자 ID 반환
-    return "dev-user-id"
+    try:
+        # get_current_user_id와 동일한 JWT 파싱 로직 사용
+        return await get_current_user_id(authorization)
+    except HTTPException:
+        return None

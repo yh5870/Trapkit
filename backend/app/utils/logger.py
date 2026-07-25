@@ -25,10 +25,14 @@ def setup_logger(name: str) -> logging.Logger:
     logging_logger.addHandler(handler)
 
     # Uvicorn 액세스 로그 설정 (Swagger UI 요청 로그 포함)
+    # 핸들러가 이미 있는지 확인 후 추가
     uvicorn_access_logger = logging.getLogger("uvicorn.access")
     uvicorn_access_logger.setLevel(logging.INFO)
-    uvicorn_access_handler = logging.StreamHandler(sys.stdout)
-    uvicorn_access_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
-    uvicorn_access_logger.addHandler(uvicorn_access_handler)
+
+    # 핸들러가 아직 없을 때만 추가
+    if not uvicorn_access_logger.handlers:
+        uvicorn_access_handler = logging.StreamHandler(sys.stdout)
+        uvicorn_access_handler.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+        uvicorn_access_logger.addHandler(uvicorn_access_handler)
 
     return logging_logger

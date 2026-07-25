@@ -35,6 +35,57 @@ def _format_sse_event(data: dict[str, Any], event_type: str = "message") -> str:
     return event_str
 
 
+@router.get("/{trip_id}/dev")
+async def get_items_by_trip_id_dev(
+    trip_id: str,
+    item_repo: get_item_repository = Depends(get_item_repository),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """Trip ID로 모든 Item 조회 (개발용, 인증 없음).
+
+    Args:
+        trip_id: Trip ID
+        item_repo: Item Repository
+        db: DB 세션
+
+    Returns:
+        Trip ID에 속한 Item 리스트
+    """
+    try:
+        trip_id_obj = TripId.from_string(trip_id)
+
+        # Item 조회 (권한 확인 없음)
+        items = await item_repo.find_by_trip_id(trip_id_obj)
+
+        return {
+            "trip_id": trip_id,
+            "items": [
+                {
+                    "id": str(item.id.value),
+                    "category": item.category,
+                    "name": item.name,
+                    "quantity": item.quantity,
+                    "tip": item.tip,
+                    "baggage_flag": item.baggage_flag,
+                    "source": item.source,
+                    "checked": item.checked,
+                    "sort_order": item.sort_order,
+                }
+                for item in items
+            ],
+            "total": len(items),
+            "checked": sum(1 for item in items if item.checked),
+            "pending": sum(1 for item in items if not item.checked),
+        }
+
+    except Exception as e:
+        logger.error(f"Item 조회 실패 (dev): {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Item 조회에 실패했습니다: {str(e)}",
+        )
+
+
 @router.get("/{trip_id}")
 async def get_items_by_trip_id(
     trip_id: str,

@@ -1,0 +1,10 @@
+{
+  "view": {
+    "trips": [
+      { "id": "1", "title": "도쿄 여행", "meta": "4박 5일 · 3월", "progress": { "checked": 8, "total": 15 } },
+      { "id": "2", "title": "제주 가족 여행", "meta": "3박 4일 · 6월", "progress": { "checked": 12, "total": 20 } }
+    ],
+    "loginRequired": "로그인하면 내 여행 리스트를 모두 볼 수 있어요.",
+    "emptyMessage": "아직 저장된 여행이 없어요."
+  }
+}

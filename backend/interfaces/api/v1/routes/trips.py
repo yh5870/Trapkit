@@ -15,14 +15,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import uuid4
 
 from app.application.commands.create_trip import CreateTripCommand
+from app.application.commands.item_commands import AddItemCommand
 from app.domain.models.trip import Trip
 from app.domain.repositories.trip_repository import TripRepository
 from app.domain.services.trip_generation_service import TripGenerationService
 from app.domain.value_objects.trip_id import TripId
 from app.utils.logger import setup_logger
-from infrastructure.database.dependencies import get_trip_repository
-from infrastructure.external.gemini_client import GeminiClient
-from interfaces.api.dependencies.auth import get_current_user_id
+from infrastructure.database.dependencies import get_trip_repository, get_item_repository
+from infrastructure.external.glm_client import GLMClient
+from interfaces.api.dependencies.auth import get_current_user_id, get_optional_user_id
 from shared.config.database import get_db
 
 logger = setup_logger(__name__)
@@ -49,7 +50,8 @@ def _format_sse_event(data: dict[str, Any], event_type: str = "message") -> str:
 async def _stream_trip_generation(
     command: CreateTripCommand,
     trip_repo: TripRepository,
-    ai_client: GeminiClient,
+    ai_client: GLMClient,
+    item_repo,
 ) -> AsyncGenerator[str, None]:
     """트립 생성 스트리밍 함수.
 
@@ -59,6 +61,7 @@ async def _stream_trip_generation(
         command: Trip 생성 Command
         trip_repo: Trip Repository
         ai_client: AI Client
+        item_repo: Item Repository
 
     Yields:
         SSE 포맷 스트리밍 데이터
@@ -115,9 +118,14 @@ async def _stream_trip_generation(
             duration_nights=command.duration_nights,
             departure_month=command.departure_month,
             companions=command.companions,
-            cautions=ai_content.get("cautions", []),
-            baggage_summary=ai_content.get("baggage_summary", []),
         )
+
+        # AI 콘텐츠 추가
+        for caution in ai_content.get("cautions", []):
+            trip = trip.add_caution(caution)
+
+        if ai_content.get("baggage_summary"):
+            trip = trip.update_baggage_summary(ai_content["baggage_summary"])
 
         # 5. 저장
         yield _format_sse_event(
@@ -130,7 +138,38 @@ async def _stream_trip_generation(
 
         saved_trip = await trip_repo.save(trip)
 
-        # 6. 완료 - 최종 Trip 객체 전송
+        # 6. 아이템 자동 생성 (AI 응답에서)
+        items_count = 0
+        if ai_content.get("items"):
+            yield _format_sse_event(
+                {
+                    "status": "creating_items",
+                    "message": "체크리스트 아이템을 생성 중입니다...",
+                },
+                event_type="creating_items",
+            )
+
+            from app.domain.models.item import Item
+            from app.domain.value_objects.item_id import ItemId
+
+            for i, item_data in enumerate(ai_content["items"]):
+                try:
+                    item = Item.create(
+                        trip_id=saved_trip.id,
+                        category=item_data.get("category", "기타"),
+                        name=item_data.get("name", "아이템"),
+                        quantity=str(item_data.get("quantity", 1)),
+                        tip=item_data.get("tip"),
+                        baggage_flag=str(item_data.get("baggage_flag", False)),
+                        source="ai",
+                    )
+                    await item_repo.save(item)
+                    items_count += 1
+                except Exception as e:
+                    logger.warning(f"아이템 {i+1} 생성 실패: {e}")
+                    continue
+
+        # 7. 완료 - 최종 Trip 객체 전송
         yield _format_sse_event(
             {
                 "status": "completed",
@@ -145,6 +184,7 @@ async def _stream_trip_generation(
                     "companions": saved_trip.companions,
                     "cautions": saved_trip.cautions,
                     "baggage_summary": saved_trip.baggage_summary,
+                    "items_count": items_count,
                     "created_at": saved_trip.created_at.isoformat(),
                     "updated_at": saved_trip.updated_at.isoformat(),
                 },
@@ -173,6 +213,7 @@ async def generate_trip_stream(
     departure_month: int | None = None,
     companions: str | None = None,
     trip_repo: TripRepository = Depends(get_trip_repository),
+    item_repo = Depends(get_item_repository),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
     """AI를 통한 트립 생성 스트리밍.
@@ -187,6 +228,7 @@ async def generate_trip_stream(
         departure_month: 출발 월
         companions: 동행인
         trip_repo: Trip Repository
+        item_repo: Item Repository
         db: DB 세션
 
     Returns:
@@ -223,12 +265,12 @@ async def generate_trip_stream(
             companions=companions,
         )
 
-        # AI 클라이언트 생성
-        ai_client = GeminiClient()
+        # AI 클라이언트 생성 (GLM 전용)
+        ai_client = GLMClient()
 
         # 스트리밍 생성
         return StreamingResponse(
-            _stream_trip_generation(command, trip_repo, ai_client),
+            _stream_trip_generation(command, trip_repo, ai_client, item_repo),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
@@ -261,6 +303,7 @@ async def generate_trip_stream_body(
     request_data: TripGenerateRequest,
     user_id: str = Depends(get_current_user_id),  # 인증 토큰에서 추출
     trip_repo: TripRepository = Depends(get_trip_repository),
+    item_repo = Depends(get_item_repository),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
     """Request Body를 사용한 트립 생성 스트리밍.
@@ -271,6 +314,7 @@ async def generate_trip_stream_body(
         request_data: 트립 생성 데이터
         user_id: 사용자 ID
         trip_repo: Trip Repository
+        item_repo: Item Repository
         db: DB 세션
 
     Returns:
@@ -287,12 +331,70 @@ async def generate_trip_stream_body(
             companions=request_data.companions,
         )
 
-        # AI 클라이언트 생성
-        ai_client = GeminiClient()
+        # AI 클라이언트 생성 (GLM 전용)
+        ai_client = GLMClient()
 
         # 스트리밍 생성
         return StreamingResponse(
-            _stream_trip_generation(command, trip_repo, ai_client),
+            _stream_trip_generation(command, trip_repo, ai_client, item_repo),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+
+    except Exception as e:
+        logger.error(f"트립 생성 스트리밍 시작 실패: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"트립 생성을 시작할 수 없습니다: {str(e)}",
+        )
+
+
+@router.post("/generate/body/dev")
+async def generate_trip_stream_body_dev(
+    request_data: TripGenerateRequest,
+    user_id: str | None = Depends(get_optional_user_id),
+    trip_repo: TripRepository = Depends(get_trip_repository),
+    item_repo = Depends(get_item_repository),
+    db: AsyncSession = Depends(get_db),
+) -> StreamingResponse:
+    """인증 없는 트립 생성 스트리밍 (개발용).
+
+    개발 환경에서 인증 없이 테스트하기 위한 엔드포인트.
+
+    Args:
+        request_data: 트립 생성 데이터
+        user_id: 사용자 ID (선택적, 없으면 'dev-user-id' 사용)
+        trip_repo: Trip Repository
+        item_repo: Item Repository
+        db: DB 세션
+
+    Returns:
+        StreamingResponse: SSE 스트리밍 응답
+    """
+    try:
+        # 사용자 ID 없으면 개발용 ID 사용
+        user_id = user_id or "dev-user-id"
+
+        # Command 생성
+        command = CreateTripCommand(
+            user_id=user_id,
+            destination=request_data.destination,
+            purpose=request_data.purpose,
+            duration_nights=request_data.duration_nights,
+            departure_month=request_data.departure_month,
+            companions=request_data.companions,
+        )
+
+        # AI 클라이언트 생성 (GLM 전용)
+        ai_client = GLMClient()
+
+        # 스트리밍 생성
+        return StreamingResponse(
+            _stream_trip_generation(command, trip_repo, ai_client, item_repo),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
