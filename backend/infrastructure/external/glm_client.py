@@ -101,18 +101,28 @@ class GLMClient(AIClient):
 
         Returns:
             AI 생성 콘텐츠:
-                - cautions: 주의사항 리스트
-                - baggage_summary: 수화물 요약 리스트
+                - cautions: 주의사항 리스트 (category / text / confidence)
+                - items: 체크리스트 아이템 리스트 (baggage_flag 정규화 완료)
+                - baggage_summary: 수화물 규정 확인이 필요한 카테고리별 건수
 
         Example:
             >>> content = await client.generate_trip_content(command)
             >>> content
             {
                 "cautions": [
-                    {"type": "weather", "message": "비 우산 챙기기"}
+                    {"category": "weather", "text": "비 우산 챙기기", "confidence": "stable"}
+                ],
+                "items": [
+                    {
+                        "category": "전자기기",
+                        "name": "보조배터리",
+                        "quantity": "1개",
+                        "tip": "100Wh 이하만 가능",
+                        "baggage_flag": "carry_on_only"
+                    }
                 ],
                 "baggage_summary": [
-                    {"category": "clothing", "count": 5}
+                    {"category": "전자기기", "count": 1}
                 ]
             }
         """
@@ -204,14 +214,23 @@ class GLMClient(AIClient):
         {
             "category": "카테고리명 (예: 옷, 전자기기, 필수품)",
             "name": "아이템명",
-            "quantity": 수량 (기본 1)",
+            "quantity": "수량 문자열 (예: \\"1개\\", \\"2벌\\", 기본 \\"1개\\")",
             "tip": "팁 (선택적, null 또는 팁 내용)",
-            "baggage_flag": true/false
+            "baggage_flag": "carry_on_only | checked_only | restricted | null"
         }
     ]
 }
 
 카테고리 예시: 옷, 전자기기, 필수품, 화장품, 위생용품, 약품, 문서, 기타
+
+baggage_flag 규칙 (매우 중요):
+- 반드시 아래 4개 값 중 하나의 **문자열**이어야 합니다. true/false 같은 불리언은 절대 사용하지 마세요.
+- "carry_on_only": 기내 반입만 가능 (예: 보조배터리, 리튬 배터리, 전자담배)
+- "checked_only": 위탁 수하물만 가능 (예: 100ml 초과 액체, 칼, 스프레이)
+- "restricted": 수량/용량 제한이 있음 (예: 100ml 이하 화장품, 의약품)
+- null: 수화물 규정과 무관한 일반 물품 (대부분의 아이템이 여기 해당)
+
+quantity는 반드시 문자열로 작성하세요 (숫자가 아님).
 아이템은 총 15-20개로, 여행지와 목적에 맞는 실용적인 것들만 선택해주세요.
 JSON만 응답해주세요. 다른 텍스트는 포함하지 마세요."""
 
@@ -266,11 +285,30 @@ JSON만 응답해주세요. 다른 텍스트는 포함하지 마세요."""
         if "items" not in content:
             content["items"] = []
 
+        # items 필드 정규화 (baggage_flag 불리언 응답 대응)
+        normalized_items = []
+        for i in content["items"]:
+            if not isinstance(i, dict):
+                continue
+
+            quantity = i.get("quantity")
+            normalized_items.append({
+                "category": i.get("category") or "기타",
+                "name": i.get("name") or "아이템",
+                # quantity가 숫자로 와도 문자열로 통일 (스키마: str | None)
+                "quantity": str(quantity) if quantity is not None else None,
+                "tip": i.get("tip"),
+                "baggage_flag": self._normalize_baggage_flag(i.get("baggage_flag")),
+            })
+        content["items"] = normalized_items
+
         # 호환성: baggage_summary가 없으면 items로부터 생성
+        # 주의: '수화물 규정 확인 필요' 건수이므로 baggage_flag가 있는 아이템만 집계한다.
         if "baggage_summary" not in content and content.get("items"):
-            # items에서 카테고리별 카운트 계산
             category_counts: dict[str, int] = {}
             for item in content["items"]:
+                if not item.get("baggage_flag"):
+                    continue
                 category = item.get("category", "기타")
                 category_counts[category] = category_counts.get(category, 0) + 1
 
@@ -280,3 +318,37 @@ JSON만 응답해주세요. 다른 텍스트는 포함하지 마세요."""
             ]
 
         return content
+
+    @staticmethod
+    def _normalize_baggage_flag(raw: Any) -> str | None:
+        """baggage_flag를 도메인이 기대하는 문자열 리터럴로 정규화.
+
+        AI가 불리언(true/false)이나 예상 밖의 값을 반환해도
+        'carry_on_only' | 'checked_only' | 'restricted' | None 으로 수렴시킨다.
+
+        Args:
+            raw: AI 응답의 baggage_flag 원본 값
+
+        Returns:
+            정규화된 flag 문자열, 규정과 무관하면 None
+        """
+        VALID = {"carry_on_only", "checked_only", "restricted"}
+
+        if raw is None:
+            return None
+
+        # 불리언 응답: True는 '규정 있음'이라는 정보만 있으므로 restricted로 격하
+        if isinstance(raw, bool):
+            return "restricted" if raw else None
+
+        if isinstance(raw, str):
+            value = raw.strip().lower()
+            if value in VALID:
+                return value
+            # 문자열로 온 불리언 ("true" / "false" / "False" 등) 방어
+            if value in {"false", "none", "null", ""}:
+                return None
+            if value == "true":
+                return "restricted"
+
+        return None

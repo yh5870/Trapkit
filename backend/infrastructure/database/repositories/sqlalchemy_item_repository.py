@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from sqlalchemy import select, func
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.models.item import Item
@@ -207,6 +207,43 @@ class SQLAlchemyItemRepository(ItemRepository):
         count = result.scalar_one()
 
         return count if count else 0
+
+    async def count_by_trip_ids(
+        self,
+        trip_ids: list[TripId],
+    ) -> dict[str, tuple[int, int]]:
+        """여러 Trip의 아이템 수를 GROUP BY로 한 번에 집계.
+
+        Args:
+            trip_ids: 집계할 Trip ID 리스트
+
+        Returns:
+            {trip_id 문자열: (전체 수, 체크된 수)} 매핑.
+            아이템이 없는 Trip은 결과에 포함되지 않는다.
+        """
+        if not trip_ids:
+            return {}
+
+        keys = [str(trip_id.value) for trip_id in trip_ids]
+
+        # COUNT(*) FILTER 대신 SUM(CASE ...)를 쓰는 이유:
+        # SQLite 등 FILTER 미지원 백엔드에서도 동일하게 동작하도록.
+        result = await self.session.execute(
+            select(
+                ItemModel.trip_id,
+                func.count().label("total"),
+                func.sum(
+                    case((ItemModel.checked.is_(True), 1), else_=0)
+                ).label("checked"),
+            )
+            .where(ItemModel.trip_id.in_(keys))
+            .group_by(ItemModel.trip_id)
+        )
+
+        return {
+            row.trip_id: (int(row.total or 0), int(row.checked or 0))
+            for row in result.all()
+        }
 
     async def update_sort_order(
         self,

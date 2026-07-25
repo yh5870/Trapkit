@@ -61,6 +61,26 @@ class ItemRepository(ABC):
         pass
 
     @abstractmethod
+    async def count_by_trip_ids(
+        self,
+        trip_ids: list[TripId],
+    ) -> dict[str, tuple[int, int]]:
+        """여러 Trip의 아이템 수를 한 번에 집계 (N+1 회피).
+
+        목록 화면의 진행률 표시용. get_total_count/get_checked_count를
+        여행마다 호출하면 쿼리가 2N번 발생하므로, GROUP BY로 1번에 처리한다.
+
+        Args:
+            trip_ids: 집계할 Trip ID 리스트
+
+        Returns:
+            {trip_id 문자열: (전체 수, 체크된 수)} 매핑.
+            아이템이 하나도 없는 Trip은 키가 존재하지 않으므로
+            호출측에서 (0, 0) 기본값 처리가 필요하다.
+        """
+        pass
+
+    @abstractmethod
     async def update_sort_order(
         self,
         item_id: ItemId,

@@ -14,7 +14,7 @@ type TripItem = {
   name: string;
   quantity: string | null;
   tip: string | null;
-  baggageFlag: string | null;
+  baggageFlag: api.BaggageFlag | null;
   source: "ai" | "user";
   checked: boolean;
   category?: string;
@@ -25,16 +25,29 @@ type Category = {
   items: TripItem[];
 };
 
-type Caution = {
-  category: string;
-  text: string;
-  item?: string;
+type Caution = api.Caution;
+
+type BaggageAlert = api.BaggageSummaryEntry;
+
+const BAGGAGE_FLAG_LABEL: Record<api.BaggageFlag, string> = {
+  carry_on_only: "기내만",
+  checked_only: "위탁만",
+  restricted: "제한 있음",
 };
 
-type BaggageAlert = {
-  category: string;
-  count: number;
-};
+/**
+ * baggage_flag를 안전하게 정규화한다.
+ * 과거 데이터에 문자열 "True"/"False"가 저장된 적이 있어,
+ * 알 수 없는 값은 null로 떨어뜨려 배지를 숨긴다.
+ */
+function normalizeBaggageFlag(raw: unknown): api.BaggageFlag | null {
+  if (typeof raw !== "string") return null;
+  const value = raw.toLowerCase();
+  // `in` 대신 hasOwnProperty로 프로토타입 체인("constructor" 등) 오탐을 차단
+  return Object.prototype.hasOwnProperty.call(BAGGAGE_FLAG_LABEL, value)
+    ? (value as api.BaggageFlag)
+    : null;
+}
 
 // 아이템을 카테고리별로 정리하는 함수
 function organizeItemsByCategory(items: api.TripItem[]): Category[] {
@@ -50,7 +63,7 @@ function organizeItemsByCategory(items: api.TripItem[]): Category[] {
       name: item.name,
       quantity: item.quantity,
       tip: item.tip,
-      baggageFlag: item.baggage_flag,
+      baggageFlag: normalizeBaggageFlag(item.baggage_flag),
       source: item.source,
       checked: item.checked,
       category: item.category,
@@ -354,7 +367,7 @@ export default function Trip() {
                               router.push(`/baggage?item=${encodeURIComponent(item.name)}`)
                             }
                           >
-                            ⚠ {item.baggageFlag === "carry_on_only" ? "기내만" : "규정"}
+                            ⚠ {BAGGAGE_FLAG_LABEL[item.baggageFlag]}
                           </button>
                         )}
                         <button
@@ -418,9 +431,10 @@ export default function Trip() {
               <div>
                 {/* API 데이터 구조에 맞춰 안전하게 출력 */}
                 <span>{caution.category || "주의사항"}</span>
-                <em>출발 전 확인</em>
+                {/* confidence가 check_required면 재확인이 필요한 정보임을 표시 */}
+                <em>{caution.confidence === "check_required" ? "확인 필요" : "출발 전 확인"}</em>
               </div>
-              <p>{caution.text || caution.item || "내용이 없습니다."}</p>
+              <p>{caution.text || "내용이 없습니다."}</p>
             </article>
           ))}
           <div className="notice">
