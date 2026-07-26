@@ -116,7 +116,10 @@ export async function generateTripWithStream(
   onComplete?: (trip: Trip) => void,
   onError?: (error: string) => void
 ): Promise<void> {
-  const url = `${API_BASE_URL}/api/v1/trips/generate/body/dev`;
+  // 인증 필요 엔드포인트. /generate/body/dev 는 인증 없이 동작하지만
+  // user_id가 'dev-user-id'로 고정되어, 생성된 여행을 본인 계정으로
+  // 조회할 수 없다(401/403). 개발 전용이며 프로덕션에서는 비활성화된다.
+  const url = `${API_BASE_URL}/api/v1/trips/generate/body`;
 
   try {
     const response = await fetch(url, {

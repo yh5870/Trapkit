@@ -24,6 +24,7 @@ from app.utils.logger import setup_logger
 from infrastructure.database.dependencies import get_trip_repository, get_item_repository
 from infrastructure.external.glm_client import GLMClient
 from interfaces.api.dependencies.auth import get_current_user_id, get_optional_user_id
+from interfaces.api.dependencies.dev_only import dev_only
 from shared.config.database import get_db
 
 logger = setup_logger(__name__)
@@ -362,7 +363,7 @@ async def generate_trip_stream_body(
         )
 
 
-@router.post("/generate/body/dev")
+@router.post("/generate/body/dev", dependencies=[Depends(dev_only)])
 async def generate_trip_stream_body_dev(
     request_data: TripGenerateRequest,
     user_id: str | None = Depends(get_optional_user_id),

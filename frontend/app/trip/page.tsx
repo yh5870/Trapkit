@@ -112,6 +112,15 @@ export default function Trip() {
         return;
       }
 
+      // 여행 조회 API는 인증이 필수다. 토큰 없이 호출하면 백엔드가
+      // 401 "Authorization header missing"을 던지고 화면이 에러로 끝나므로,
+      // 미리 로그인으로 유도한다. (복귀 후 이 페이지로 되돌아옴)
+      if (!api.getAccessToken()) {
+        localStorage.setItem("tripkit-return", "/trip");
+        router.push("/login");
+        return;
+      }
+
       try {
         setTripId(storedTripId);
 
@@ -154,7 +163,7 @@ export default function Trip() {
     };
 
     loadTripData();
-  }, []);
+  }, [router]);
 
   const toggle = (id: string) => setCategories((current) =>
     current.map((category) => ({
