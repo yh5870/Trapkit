@@ -56,12 +56,43 @@ class Settings(BaseSettings):
     RATE_LIMIT_ANONYMOUS: int = 5
     RATE_LIMIT_AUTHENTICATED: int = 20
 
+    @field_validator(
+        "DATABASE_URL",
+        "JWT_SECRET",
+        "GLM_API_KEY",
+        "GEMINI_API_KEY",
+        "REDIS_URL",
+        "GLM_MODEL",
+        "GEMINI_MODEL",
+        "ENVIRONMENT",
+        mode="before",
+    )
+    @classmethod
+    def strip_whitespace(cls, v: Any) -> Any:
+        """문자열 설정값의 앞뒤 공백/개행 제거.
+
+        대시보드(Render 등)에 값을 붙여넣을 때 끝에 개행이 섞여 들어가는 일이
+        잦다. 예를 들어 DATABASE_URL 끝에 '\\n' 이 붙으면 DB 이름이
+        'postgres\\n' 으로 해석되어 InvalidCatalogNameError 가 발생하고,
+        JWT_SECRET 에 붙으면 토큰 검증이 조용히 실패해 원인 파악이 어렵다.
+
+        Args:
+            v: 원본 설정값
+
+        Returns:
+            문자열이면 strip() 결과, 아니면 원본 그대로
+        """
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, v: str | list[str]) -> list[str]:
         """CORS 오리진 파싱."""
         if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",")]
+            # 빈 항목 제거 (예: 끝에 콤마가 붙은 경우)
+            return [o.strip() for o in v.split(",") if o.strip()]
         return v
 
 
