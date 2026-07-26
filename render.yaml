@@ -21,7 +21,17 @@ services:
     region: singapore
     rootDir: backend
 
-    buildCommand: pip install -r requirements.txt
+    # alembic upgrade head 는 멱등이다. 현재 DB는 이미 head 상태이므로
+    # 지금은 no-op이고, 이후 마이그레이션을 추가했을 때 배포와 함께
+    # 자동 적용되어 "새 컬럼을 기대하는 코드가 구 스키마에 배포되는" 사고를 막는다.
+    #
+    # alembic/env.py 가 async_engine_from_config 로 settings.DATABASE_URL 을
+    # 직접 읽으므로 postgresql+asyncpg URL 그대로 동작한다.
+    #
+    # 트레이드오프: 마이그레이션이 실패하면 빌드도 실패한다(= 배포 중단).
+    # 스키마와 안 맞는 코드가 올라가는 것보다 안전하지만, 이 동작을 원치
+    # 않으면 뒤의 '&& alembic upgrade head' 를 제거하면 된다.
+    buildCommand: pip install -r requirements.txt && alembic upgrade head
 
     # $PORT는 Render가 주입한다. 이 포트로 리스닝하지 않으면
     # 헬스체크가 실패해 배포가 뜨지 않는다.
