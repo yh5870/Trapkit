@@ -33,13 +33,15 @@ services:
     build: .
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
       DATABASE_URL: postgresql+asyncpg://trapkit:trapkit_password@postgres:5432/trapkit
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET: development-secret-key-change-in-production
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
       ENVIRONMENT: development
-      CORS_ORIGINS: http://localhost:3000
+      CORS_ORIGINS: '["http://localhost:3000"]'
     depends_on:
       postgres:
         condition: service_healthy

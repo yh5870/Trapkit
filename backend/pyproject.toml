@@ -3,7 +3,7 @@ name = "trapkit-backend"
 version = "0.1.0"
 description = "Tripkit Backend API - AI 여행 준비물 리스트 & 수화물 규정 체크 서비스"
 readme = "README.md"
-requires-python = ">=3.12,<3.13"
+requires-python = ">=3.12,<3.15"
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
@@ -16,7 +16,8 @@ dependencies = [
     "python-jose[cryptography]>=3.3.0",
     "python-multipart>=0.0.20",
     "httpx>=0.28.0",
-    "anthropic>=0.45.0",
+    "google-genai>=1.0.0",
+    "redis>=5.2.0",
     "pytest>=8.3.0",
     "pytest-asyncio>=0.24.0",
     "pytest-cov>=6.0.0",
@@ -25,6 +26,9 @@ dependencies = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app", "infrastructure", "interfaces", "shared"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -1,0 +1,40 @@
+{
+  "page": {
+    "prompt": "가져가실 품목의 규정을 확인해보세요."
+  },
+  "view": {
+    "flightTypes": ["국제선", "국내선"],
+    "units": ["ml", "g", "개", "L"],
+    "verdicts": [
+      {
+        "match": ["선크림", "로션"],
+        "title": "선크림/로션",
+        "source": "db",
+        "carryOn": { "verdict": "caution", "label": "제한 있음", "reason": "100ml 이하만 기내 반입 가능" },
+        "checked": { "verdict": "allowed", "label": "가능", "reason": "용량 제한 없이 위탁 가능" },
+        "tips": "용량 표시가 있는 용기에 담아주세요.",
+        "reference": "공항 규정"
+      },
+      {
+        "match": ["보조배터리"],
+        "title": "보조배터리",
+        "source": "db",
+        "carryOn": { "verdict": "caution", "label": "제한 있음", "reason": "100Wh 이하만 기내 반입 가능" },
+        "checked": { "verdict": "prohibited", "label": "불가", "reason": "보조배터리는 위탁 반입 금지" },
+        "tips": "백분율 용량 표시를 확인해주세요.",
+        "reference": "항공안전 규정"
+      }
+    ],
+    "popularChips": ["선크림", "보조배터리", "액체류", "무선 이어폰"],
+    "recentSearches": ["선크림", "보조배터리", "헤어스프레이"],
+    "notice": "각 항공사 규정이 다를 수 있습니다. 출발 전 반드시 확인해주세요.",
+    "aiFallback": {
+      "source": "ai",
+      "title": "알 수 없음",
+      "carryOn": { "verdict": "unknown", "label": "확인 필요", "reason": "정보가 부족하여 판정할 수 없습니다." },
+      "checked": { "verdict": "unknown", "label": "확인 필요", "reason": "정보가 부족하여 판정할 수 없습니다." },
+      "tips": "항공사에 문의하거나 기내 반입 규정을 확인해주세요.",
+      "reference": "AI 분석 결과"
+    }
+  }
+}

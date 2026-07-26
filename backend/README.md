@@ -8,7 +8,7 @@ FastAPI 기반 Tripkit 백엔드 API
 - **Database**: PostgreSQL (Async SQLAlchemy)
 - **ORM**: SQLAlchemy 2.0+
 - **Authentication**: JWT (python-jose)
-- **AI**: Anthropic Claude API
+- **AI**: Google Gemini API
 - **Testing**: pytest, pytest-asyncio
 
 ## 프로젝트 구조
@@ -40,7 +40,7 @@ trapkit-backend/
 │   │   └── ai.py               # AI 응답 스키마
 │   ├── services/
 │   │   ├── __init__.py
-│   │   ├── ai_service.py       # AI 호출 서비스 (Anthropic)
+│   │   ├── ai_service.py       # AI 호출 서비스 (Google Gemini)
 │   │   ├── baggage_checker.py  # 수화물 판정 엔진
 │   │   ├── cache.py            # 캐시 서비스 (Redis)
 │   │   └── rate_limit.py       # 레이트 리밋 서비스
@@ -78,7 +78,8 @@ cp .env.example .env
 |------|------|--------|
 | `DATABASE_URL` | PostgreSQL 연결 URL | - |
 | `JWT_SECRET` | JWT 시크릿 키 | - |
-| `ANTHROPIC_API_KEY` | Anthropic API 키 | - |
+| `GEMINI_API_KEY` | Google Gemini API 키 | - |
+| `GEMINI_MODEL` | Gemini 모델 | `gemini-1.5-flash` |
 | `REDIS_URL` | Redis 연결 URL | - |
 | `CORS_ORIGINS` | 허용된 CORS 오리진 | `http://localhost:3000` |
 

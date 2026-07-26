@@ -1,6 +1,6 @@
-"""AI 호출 서비스 (Anthropic Claude)."""
+"""AI 호출 서비스 (Google Gemini)."""
 
-import anthropic
+import google.generativeai as genai
 
 from app.config import settings
 from app.schemas.ai import AITripResponse
@@ -10,16 +10,21 @@ class AIService:
     """AI 서비스."""
 
     def __init__(self) -> None:
-        self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        self.model = None
+        if settings.GEMINI_API_KEY:
+            genai.configure(api_key=settings.GEMINI_API_KEY)
+            self.model = genai.GenerativeModel(settings.GEMINI_MODEL)
 
     async def generate_trip_list(self, prompt: dict) -> AITripResponse:
         """AI 리스트 생성."""
         # TODO: 실제 AI 호출 구현
-        # response = self.client.messages.create(
-        #     model="claude-sonnet-4-20250514",
-        #     max_tokens=settings.AI_MAX_TOKENS,
-        #     system=self._get_system_prompt(),
-        #     messages=[{"role": "user", "content": self._get_user_prompt(prompt)}],
+        # response = self.model.generate_content(
+        #     self._get_user_prompt(prompt),
+        #     generation_config=genai.types.GenerationConfig(
+        #         max_output_tokens=settings.AI_MAX_TOKENS,
+        #         temperature=0.7,
+        #     ),
+        #     system_instruction=self._get_system_prompt(),
         # )
         # return self._parse_response(response)
 

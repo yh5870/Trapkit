@@ -5,10 +5,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, baggage, health, trips
+from app.api import auth, health, trips, trip_domain
+from interfaces.api.v1.routes import baggage, items, memos
 from app.config import settings
 from app.core.database import init_db, close_db
 from app.utils.logger import setup_logger
+from interfaces.api.v1.routes import trips as streaming_trips
 
 logger = setup_logger(__name__)
 
@@ -45,7 +47,11 @@ app.add_middleware(
 app.include_router(health.router, prefix="/health", tags=["Health"])
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(trips.router, prefix="/api/trips", tags=["Trips"])
-app.include_router(baggage.router, prefix="/api/baggage", tags=["Baggage"])
+app.include_router(trip_domain.router, prefix="/api/v1/trips", tags=["Trips V1 (Domain)"])
+app.include_router(streaming_trips.router, prefix="/api/v1/trips", tags=["Trips V1 (Streaming)"])
+app.include_router(baggage.router, prefix="/api/v1", tags=["Baggage"])
+app.include_router(items.router, prefix="/api/v1/items", tags=["Items"])
+app.include_router(memos.router, prefix="/api/v1/memos", tags=["Memos"])
 
 
 @app.get("/")

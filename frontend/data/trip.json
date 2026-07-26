@@ -1,0 +1,36 @@
+{
+  "page": {
+    "tripTitle": "CTS 여행 리스트",
+    "meta": "4박 5일 · 2026년 3월"
+  },
+  "view": {
+    "tabs": ["체크리스트", "주의사항", "메모"],
+    "categories": [
+      {
+        "name": "의류",
+        "items": [
+          { "id": "1", "name": "여행용 세탁물", "quantity": null, "tip": null, "baggageFlag": null, "source": "ai", "checked": false },
+          { "id": "2", "name": "내복 세트", "quantity": "4세트", "tip": null, "baggageFlag": null, "source": "ai", "checked": false }
+        ]
+      },
+      {
+        "name": "세면용품",
+        "items": [
+          { "id": "3", "name": "치약·칫솔", "quantity": null, "tip": null, "baggageFlag": null, "source": "ai", "checked": false },
+          { "id": "4", "name": "선크림", "quantity": null, "tip": null, "baggageFlag": "carry_on_only", "source": "ai", "checked": false }
+        ]
+      }
+    ],
+    "memos": [
+      { "id": "m1", "content": "공항까지 지하철로 이동", "updatedAt": "방금" }
+    ],
+    "baggageSummary": [
+      { "item": "선크림", "rule": "100ml 이하 기내 반입 가능" },
+      { "item": "보조배터리", "rule": "160Wh 이하 위탁 반입" }
+    ],
+    "cautions": [
+      { "category": "보조배터리", "confidence": "check_required", "text": "보조배터리는 100Wh 이하만 기내 반입 가능합니다." }
+    ],
+    "cautionNotice": "출발 전 공항 규정을 다시 확인해주세요."
+  }
+}

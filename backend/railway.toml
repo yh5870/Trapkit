@@ -1,0 +1,46 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+
+[[services]]
+name = "api"
+protocol = "http"
+
+[[services.ports]]
+port = 8000
+
+[[services.env]]
+name = "DATABASE_URL"
+value = "postgresql://postgres:${{postgres.PASSWORD}}@${{postgres.HOSTNAME}}:5432/${{postgres.DATABASE}}"
+
+[[services.env]]
+name = "REDIS_URL"
+value = "redis://default:${{redis.PASSWORD}}@${{redis.HOSTNAME}}:6379"
+
+[[services.env]]
+name = "JWT_SECRET"
+generateValue = true
+
+[[services.env]]
+name = "GEMINI_API_KEY"
+prerequisite = "GEMINI_API_KEY"
+
+[[services.env]]
+name = "ENVIRONMENT"
+value = "production"
+
+[[services.env]]
+name = "CORS_ORIGINS"
+value = "https://trapkit.vercel.app"
+
+[postgres]
+image = "postgres:15-alpine"
+
+[redis]
+image = "redis:7-alpine"

@@ -1,0 +1,25 @@
+{
+  "page": {
+    "tagline": "당신의 여행에 딱 맞는 패킹 리스트를 만들어드려요.",
+    "prompt": "어디로 여행을 가시나요?"
+  },
+  "view": {
+    "placeholders": {
+      "destination": "예: 도쿄, 파리, 제주도"
+    },
+    "purposeChips": ["일본 여행", "출장", "가족 여행", "캠핑"],
+    "optionalFields": {
+      "durationLabel": "여행 기간",
+      "monthLabel": "출발 시기"
+    },
+    "recentTrips": [
+      { "id": "1", "title": "도쿄 여행", "meta": "4박 5일 · 3월" },
+      { "id": "2", "title": "제주 가족 여행", "meta": "3박 4일 · 6월" }
+    ],
+    "baggageShortcut": {
+      "title": "수화물 체커",
+      "subtitle": "기내·위탁 규정 바로 확인",
+      "popularChips": ["선크림", "보조배터리", "액체류"]
+    }
+  }
+}

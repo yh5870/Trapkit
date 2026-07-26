@@ -9,8 +9,13 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.config import settings
-# TODO: 실제 Base 상속 모델로 변경
-# from app.models import Base
+from shared.config.database import Base
+
+# 모든 ORM 모델 import (메타데이터에 등록되도록)
+import infrastructure.database.models.item_model
+import infrastructure.database.models.memo_model
+import infrastructure.database.models.profile_model
+import infrastructure.database.models.trip_model
 
 # Alembic Config 객체
 config = context.config
@@ -20,9 +25,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # 메타데이터
-# TODO: 실제 Base로 변경
-# target_metadata = Base.metadata
-target_metadata = None
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:

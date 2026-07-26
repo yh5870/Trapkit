@@ -67,15 +67,39 @@ class ChecklistItem:
 class Memo:
     """Memo 모델."""
 
-    # TODO: 실제 SQLAlchemy Base 상속 모델로 변경
-    # class Memo(Base):
-    #     __tablename__ = "memos"
-    #
-    #     id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    #     trip_id: Mapped[UUID] = mapped_column(ForeignKey("trips.id"))
-    #     trip: Mapped["Trip"] = relationship(back_populates="memos")
-    #     content: Mapped[str] = mapped_column(Text, max_length=2000)
-    #     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
-    #     updated_at: Mapped[datetime] = mapped_column(default=datetime.utcnow, onupdate=datetime.utcnow)
+    def __init__(
+        self,
+        id: str,
+        trip_id: str,
+        content: str,
+        created_at: datetime | None = None,
+        updated_at: datetime | None = None,
+    ):
+        from uuid import uuid4
 
-    pass
+        self.id = id or str(uuid4())
+        self.trip_id = trip_id
+        self.content = content
+        self.created_at = created_at or datetime.utcnow()
+        self.updated_at = updated_at or datetime.utcnow()
+
+    @classmethod
+    def create(cls, trip_id: str, content: str) -> "Memo":
+        """새 Memo 생성."""
+        from uuid import uuid4
+
+        return cls(
+            id=str(uuid4()),
+            trip_id=trip_id,
+            content=content,
+        )
+
+    def update_content(self, new_content: str) -> "Memo":
+        """내용 업데이트 (불변 객체 패턴)."""
+        return Memo(
+            id=self.id,
+            trip_id=self.trip_id,
+            content=new_content,
+            created_at=self.created_at,
+            updated_at=datetime.utcnow(),
+        )

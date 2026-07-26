@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(docker compose ps)",
+      "Read(//c/Users/tjswn/RBX/Trapkit-fresh/**)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\Activate.ps1)",
+      "PowerShell(python -m pip list)",
+      "PowerShell(pip install -r requirements.txt)",
+      "PowerShell(Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process)",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m pip list)",
+      "PowerShell(pip install redis)",
+      "PowerShell(pip show redis)",
+      "Bash(python -c \"import sys; print\\('\\\\n'.join\\(sys.path\\)\\)\")",
+      "Bash(.venv/Scripts/python.exe -c \"import redis; print\\('redis installed'\\)\")",
+      "Bash(.venv/Scripts/python.exe -c \"import sys; sys.path.insert\\(0, '.'\\); from shared.config.database import Base; print\\('Base import OK'\\)\")",
+      "Bash(.venv/Scripts/pip.exe list *)",
+      "Bash(.venv/Scripts/pip.exe install *)",
+      "Bash(.venv/Scripts/python.exe -c \"import redis; from shared.config.database import Base; from infrastructure.database.models.baggage_rule_model import BaggageRuleModel; print\\('All imports OK!'\\)\")",
+      "PowerShell(.\\\\.venv\\\\Scripts\\\\python.exe -m uvicorn app.main:app --reload)"
+    ]
+  }
+}
