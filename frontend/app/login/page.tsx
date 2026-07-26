@@ -24,7 +24,7 @@ export default function Login() {
         login: ["이메일", "비밀번호"],
         signup: ["이름", "이메일", "비밀번호"]
       },
-      passwordRule: "비밀번호는 8자 이상이어야 합니다."
+      passwordRule: "비밀번호는 영문과 숫자를 포함해 8자 이상이어야 합니다."
     }
   };
 
@@ -33,8 +33,17 @@ export default function Login() {
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    if (tab === "회원가입" && String(form.get("비밀번호") || "").length < 8) {
-      return setError(authData.view.passwordRule);
+
+    if (tab === "회원가입") {
+      // 백엔드 SignupRequest.validate_password 와 동일한 규칙.
+      // 길이만 검사하면 영문/숫자 조건에서 422가 나고, 그 에러가
+      // 사용자에게 원인 없이 표시된다.
+      const password = String(form.get("비밀번호") || "");
+      const valid =
+        password.length >= 8 &&
+        /[A-Za-z]/.test(password) &&
+        /[0-9]/.test(password);
+      if (!valid) return setError(authData.view.passwordRule);
     }
 
     setError("");
@@ -46,16 +55,13 @@ export default function Login() {
           email: String(form.get("이메일")),
           password: String(form.get("비밀번호"))
         });
-        console.log(response);
-        
         api.setAccessToken(response.access_token);
         api.setUserId(response.user.id);
-        console.log("저장된 token:", localStorage.getItem("tripkit-access-token"));
-        console.log("저장된 userId:", localStorage.getItem("tripkit-user-id"));
         setLoggedIn(true);
       } else {
-        const response = await api.signup({
-          name: String(form.get("이름")),
+        // /signup 은 토큰을 반환하지 않으므로 가입 직후 로그인까지 수행한다.
+        const response = await api.signupAndLogin({
+          nickname: String(form.get("이름")),
           email: String(form.get("이메일")),
           password: String(form.get("비밀번호"))
         });
