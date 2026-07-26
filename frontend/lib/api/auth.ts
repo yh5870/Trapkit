@@ -10,28 +10,36 @@ export interface LoginRequest {
 }
 
 export interface SignupRequest {
-  name: string;
   email: string;
   password: string;
+  /** 백엔드 SignupRequest 는 'nickname' 을 요구한다 ('name' 아님). */
+  nickname: string;
 }
 
+/** 백엔드 UserResponse (app/schemas/auth.py) */
+export interface UserResponse {
+  id: string;
+  email: string;
+  nickname: string;
+  created_at: string;
+}
+
+/** 백엔드 TokenResponse. 로그인 응답 전용. */
 export interface AuthResponse {
   access_token: string;
   token_type: string;
-  user: {
-    id: string;
-    email: string;
-    nickname: string;
-    created_at: string;
-  };
+  user: UserResponse;
 }
 
-export interface UserProfile {
-  id: string;
-  email: string;
-  name: string | null;
-  created_at: string;
-}
+/**
+ * 회원가입 응답.
+ * 주의: 백엔드 /signup 은 response_model=UserResponse 라 토큰을 주지 않는다.
+ * 토큰이 필요하면 가입 후 별도로 login() 을 호출해야 한다.
+ */
+export type SignupResponse = UserResponse;
+
+/** GET /api/auth/me 응답 = UserResponse */
+export type UserProfile = UserResponse;
 
 /**
  * 로그인
@@ -43,8 +51,19 @@ export async function login(request: LoginRequest): Promise<AuthResponse> {
 /**
  * 회원가입
  */
-export async function signup(request: SignupRequest): Promise<AuthResponse> {
-  return apiPost<AuthResponse>('/api/auth/signup', request);
+export async function signup(request: SignupRequest): Promise<SignupResponse> {
+  return apiPost<SignupResponse>('/api/auth/signup', request);
+}
+
+/**
+ * 회원가입 후 곧바로 로그인해 토큰까지 확보한다.
+ *
+ * 백엔드 /signup 이 토큰을 반환하지 않으므로, 가입 직후 로그인 화면으로
+ * 되돌리지 않으려면 이 조합이 필요하다.
+ */
+export async function signupAndLogin(request: SignupRequest): Promise<AuthResponse> {
+  await signup(request);
+  return login({ email: request.email, password: request.password });
 }
 
 /**
