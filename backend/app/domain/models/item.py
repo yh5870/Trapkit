@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 from typing import Self
 from uuid import UUID, uuid4
 
-from app.domain.models.trip import Trip
 from app.domain.value_objects.trip_id import TripId
 from app.domain.value_objects.item_id import ItemId
 from app.domain.value_objects.memo_id import MemoId

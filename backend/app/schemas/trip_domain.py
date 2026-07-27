@@ -26,6 +26,10 @@ class TripResponse(BaseModel):
     created_at: datetime = Field(..., description="생성일시")
     updated_at: datetime = Field(..., description="수정일시")
 
+    # 진행률 (조회 시점 집계, DB에 저장하지 않음)
+    items_count: int = Field(0, ge=0, description="전체 아이템 수")
+    checked_count: int = Field(0, ge=0, description="체크 완료된 아이템 수")
+
     class Config:
         """Pydantic 설정."""
 

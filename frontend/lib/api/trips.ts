@@ -11,32 +11,58 @@ export interface TripGenerateRequest {
   companions?: string;
 }
 
+/** 수화물 규정 플래그. 규정과 무관한 일반 물품은 null. */
+export type BaggageFlag = 'carry_on_only' | 'checked_only' | 'restricted';
+
+/** 주의사항 신뢰도. check_required는 출발 전 재확인이 필요함을 뜻한다. */
+export type CautionConfidence = 'stable' | 'check_required';
+
+export interface Caution {
+  category: string;
+  text: string;
+  confidence: CautionConfidence;
+}
+
+export interface BaggageSummaryEntry {
+  category: string;
+  count: number;
+}
+
 export interface TripItem {
   id: string;
-  trip_id: string;
+  /** 목록 조회(GET /api/v1/items/:tripId) 응답의 개별 아이템에는 포함되지 않는다. */
+  trip_id?: string;
   category: string;
   name: string;
   quantity: string | null;
   tip: string | null;
-  baggage_flag: string | null;
+  baggage_flag: BaggageFlag | null;
   source: 'ai' | 'user';
   checked: boolean;
+  sort_order?: number;
 }
 
 export interface Trip {
   id: string;
   title: string;
   destination: string;
-  purpose: string;
+  /** 백엔드는 list[str]로 반환한다 (TripResponse.purpose). */
+  purpose: string[];
   user_id: string;
   duration_nights: number | null;
   departure_month: number | null;
   companions: string | null;
-  cautions: Array<{ category: string; text: string }>;
-  baggage_summary: Array<{ category: string; count: number }>;
+  cautions: Caution[];
+  baggage_summary: BaggageSummaryEntry[];
   created_at: string;
   updated_at: string;
-  items_count?: number;
+  /**
+   * 진행률. 백엔드가 조회 시점에 GROUP BY로 집계한다 (DB 저장 아님).
+   * GET /trips, GET /trips/:id 에만 채워지고 POST/PATCH 응답에서는 0이므로
+   * 쓰기 응답으로 목록 상태를 통째로 덮어쓰지 말 것.
+   */
+  items_count: number;
+  checked_count: number;
 }
 
 export interface SSEMessage {
@@ -90,7 +116,10 @@ export async function generateTripWithStream(
   onComplete?: (trip: Trip) => void,
   onError?: (error: string) => void
 ): Promise<void> {
-  const url = `${API_BASE_URL}/api/v1/trips/generate/body/dev`;
+  // 인증 필요 엔드포인트. /generate/body/dev 는 인증 없이 동작하지만
+  // user_id가 'dev-user-id'로 고정되어, 생성된 여행을 본인 계정으로
+  // 조회할 수 없다(401/403). 개발 전용이며 프로덕션에서는 비활성화된다.
+  const url = `${API_BASE_URL}/api/v1/trips/generate/body`;
 
   try {
     const response = await fetch(url, {
@@ -213,6 +242,27 @@ export async function getUserTrips(accessToken?: string): Promise<Trip[]> {
     accessToken
   );
   return response.trips;
+}
+
+/**
+ * 여행 제목 수정
+ *
+ * 주의: PATCH 응답의 items_count/checked_count는 집계되지 않아 0이다.
+ * 목록 상태를 갱신할 때는 반환값 전체가 아니라 title만 반영할 것.
+ */
+export async function updateTripTitle(
+  tripId: string,
+  title: string,
+  accessToken?: string
+): Promise<Trip> {
+  return apiPatch<Trip>(`/api/v1/trips/${tripId}`, { title }, accessToken);
+}
+
+/**
+ * 여행 삭제 (체크리스트/메모도 CASCADE 삭제됨)
+ */
+export async function deleteTrip(tripId: string, accessToken?: string): Promise<void> {
+  await apiDelete(`/api/v1/trips/${tripId}`, accessToken);
 }
 
 /**

@@ -21,6 +21,7 @@ from app.domain.value_objects.trip_id import TripId
 from app.utils.logger import setup_logger
 from infrastructure.database.dependencies import get_item_repository, get_trip_repository
 from interfaces.api.dependencies.auth import get_current_user_id
+from interfaces.api.dependencies.dev_only import dev_only
 from shared.config.database import get_db
 
 logger = setup_logger(__name__)
@@ -35,7 +36,7 @@ def _format_sse_event(data: dict[str, Any], event_type: str = "message") -> str:
     return event_str
 
 
-@router.get("/{trip_id}/dev")
+@router.get("/{trip_id}/dev", dependencies=[Depends(dev_only)])
 async def get_items_by_trip_id_dev(
     trip_id: str,
     item_repo: get_item_repository = Depends(get_item_repository),

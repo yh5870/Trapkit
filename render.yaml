@@ -1,0 +1,68 @@
+# Render Blueprint (Infrastructure as Code)
+#
+# ⚠️ 배치 위치: 이 파일은 저장소 루트에 있어야 Render가 인식한다.
+#    현재 위치(backend/)에서 상위로 옮겨줘:
+#      move backend\render.yaml .\render.yaml
+#    (rootDir: backend 설정이 있어 옮긴 뒤에도 백엔드를 정상 빌드한다)
+#
+# 사용법:
+#   render blueprint launch      # 최초 생성
+#   이후에는 git push 시 자동 배포
+#
+# 시크릿(sync: false)은 이 파일에 값을 쓰지 않는다.
+# Render 대시보드 또는 CLI로 별도 주입한다.
+
+services:
+  - type: web
+    name: trapkit-backend
+    runtime: python
+    plan: free
+    # 한국에서 가장 가까운 리전
+    region: singapore
+    rootDir: backend
+
+    # alembic upgrade head 는 멱등이다. 현재 DB는 이미 head 상태이므로
+    # 지금은 no-op이고, 이후 마이그레이션을 추가했을 때 배포와 함께
+    # 자동 적용되어 "새 컬럼을 기대하는 코드가 구 스키마에 배포되는" 사고를 막는다.
+    #
+    # alembic/env.py 가 async_engine_from_config 로 settings.DATABASE_URL 을
+    # 직접 읽으므로 postgresql+asyncpg URL 그대로 동작한다.
+    #
+    # 트레이드오프: 마이그레이션이 실패하면 빌드도 실패한다(= 배포 중단).
+    # 스키마와 안 맞는 코드가 올라가는 것보다 안전하지만, 이 동작을 원치
+    # 않으면 뒤의 '&& alembic upgrade head' 를 제거하면 된다.
+    buildCommand: pip install -r requirements.txt && alembic upgrade head
+
+    # $PORT는 Render가 주입한다. 이 포트로 리스닝하지 않으면
+    # 헬스체크가 실패해 배포가 뜨지 않는다.
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+
+    # app/api/health.py 의 @router.get("/") + prefix="/health"
+    healthCheckPath: /health
+
+    envVars:
+      # pyproject requires-python = ">=3.12,<3.15"
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+
+      # 인증 없는 /dev 엔드포인트를 차단하는 스위치.
+      # (미설정이어도 dev_only 가드가 차단하지만 명시해 둔다)
+      - key: ENVIRONMENT
+        value: production
+
+      # ── 아래는 값을 저장소에 두지 않는다 (대시보드에서 입력) ──
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: GLM_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+      # 프론트 배포 후 Vercel 도메인으로 갱신 필요.
+      # 콤마 구분 문자열을 config.py 의 parse_cors_origins 가 리스트로 파싱한다.
+      - key: CORS_ORIGINS
+        sync: false

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.services.trip_query_service import TripQueryService
 from app.domain.models.trip import Trip
+from app.domain.repositories.item_repository import ItemRepository
 from app.domain.repositories.trip_repository import TripRepository
 from app.domain.value_objects.trip_id import TripId
 from app.schemas.trip_domain import (
@@ -19,7 +20,7 @@ from app.schemas.trip_domain import (
     TripUpdate,
 )
 from app.utils.logger import setup_logger
-from infrastructure.database.dependencies import get_trip_repository
+from infrastructure.database.dependencies import get_item_repository, get_trip_repository
 from interfaces.api.dependencies.auth import get_current_user_id
 from shared.config.database import get_db
 
@@ -31,6 +32,7 @@ router = APIRouter()
 async def get_user_trips(
     user: str = Depends(get_current_user_id),
     trip_repo: TripRepository = Depends(get_trip_repository),
+    item_repo: ItemRepository = Depends(get_item_repository),
 ) -> TripListResponse:
     """사용자의 모든 Trip 조회.
 
@@ -45,26 +47,33 @@ async def get_user_trips(
         HTTPException: 조회 실패 시
     """
     try:
-        query_service = TripQueryService(trip_repo)
+        query_service = TripQueryService(trip_repo, item_repo)
         trips = await query_service.get_user_trips(user)
 
-        trip_responses = [
-            TripResponse(
-                id=str(trip.id.value),
-                title=trip.title,
-                destination=trip.destination,
-                purpose=trip.purpose,
-                user_id=trip.user_id,
-                duration_nights=trip.duration_nights,
-                departure_month=trip.departure_month,
-                companions=trip.companions,
-                cautions=trip.cautions,
-                baggage_summary=trip.baggage_summary,
-                created_at=trip.created_at,
-                updated_at=trip.updated_at,
+        # 진행률 집계 (여행이 몇 개든 GROUP BY 쿼리 1번)
+        progress = await query_service.get_trip_progress(trips)
+
+        trip_responses = []
+        for trip in trips:
+            total, checked = progress.get(str(trip.id.value), (0, 0))
+            trip_responses.append(
+                TripResponse(
+                    id=str(trip.id.value),
+                    title=trip.title,
+                    destination=trip.destination,
+                    purpose=trip.purpose,
+                    user_id=trip.user_id,
+                    duration_nights=trip.duration_nights,
+                    departure_month=trip.departure_month,
+                    companions=trip.companions,
+                    cautions=trip.cautions,
+                    baggage_summary=trip.baggage_summary,
+                    created_at=trip.created_at,
+                    updated_at=trip.updated_at,
+                    items_count=total,
+                    checked_count=checked,
+                )
             )
-            for trip in trips
-        ]
 
         return TripListResponse(trips=trip_responses, total=len(trip_responses))
 
@@ -81,6 +90,7 @@ async def get_trip_by_id(
     trip_id: str,
     user: str = Depends(get_current_user_id),
     trip_repo: TripRepository = Depends(get_trip_repository),
+    item_repo: ItemRepository = Depends(get_item_repository),
 ) -> TripResponse:
     """ID로 Trip 조회.
 
@@ -96,7 +106,7 @@ async def get_trip_by_id(
         HTTPException: Trip을 찾을 수 없거나 접근 권한이 없을 때
     """
     try:
-        query_service = TripQueryService(trip_repo)
+        query_service = TripQueryService(trip_repo, item_repo)
         trip = await query_service.get_trip_by_id(trip_id)
 
         if trip is None:
@@ -112,6 +122,9 @@ async def get_trip_by_id(
                 detail="이 Trip에 접근할 권한이 없습니다.",
             )
 
+        progress = await query_service.get_trip_progress([trip])
+        total, checked = progress.get(str(trip.id.value), (0, 0))
+
         return TripResponse(
             id=str(trip.id.value),
             title=trip.title,
@@ -125,6 +138,8 @@ async def get_trip_by_id(
             baggage_summary=trip.baggage_summary,
             created_at=trip.created_at,
             updated_at=trip.updated_at,
+            items_count=total,
+            checked_count=checked,
         )
 
     except HTTPException:

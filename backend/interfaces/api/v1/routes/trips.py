@@ -24,6 +24,7 @@ from app.utils.logger import setup_logger
 from infrastructure.database.dependencies import get_trip_repository, get_item_repository
 from infrastructure.external.glm_client import GLMClient
 from interfaces.api.dependencies.auth import get_current_user_id, get_optional_user_id
+from interfaces.api.dependencies.dev_only import dev_only
 from shared.config.database import get_db
 
 logger = setup_logger(__name__)
@@ -154,13 +155,19 @@ async def _stream_trip_generation(
 
             for i, item_data in enumerate(ai_content["items"]):
                 try:
+                    # baggage_flag / quantity는 GLMClient._parse_response에서
+                    # 이미 정규화되므로 여기서 str() 강제 캐스팅을 하지 않는다.
+                    # (str(False) == "False" 가 저장되어 프론트에서 truthy로
+                    #  판정되던 버그를 방지)
+                    quantity = item_data.get("quantity")
+
                     item = Item.create(
                         trip_id=saved_trip.id,
-                        category=item_data.get("category", "기타"),
-                        name=item_data.get("name", "아이템"),
-                        quantity=str(item_data.get("quantity", 1)),
+                        category=item_data.get("category") or "기타",
+                        name=item_data.get("name") or "아이템",
+                        quantity=str(quantity) if quantity is not None else None,
                         tip=item_data.get("tip"),
-                        baggage_flag=str(item_data.get("baggage_flag", False)),
+                        baggage_flag=item_data.get("baggage_flag"),
                         source="ai",
                     )
                     await item_repo.save(item)
@@ -184,7 +191,10 @@ async def _stream_trip_generation(
                     "companions": saved_trip.companions,
                     "cautions": saved_trip.cautions,
                     "baggage_summary": saved_trip.baggage_summary,
+                    # 생성 직후이므로 체크된 아이템은 항상 0.
+                    # TripResponse와 필드를 맞춰 프론트 Trip 타입이 일관되게 유지된다.
                     "items_count": items_count,
+                    "checked_count": 0,
                     "created_at": saved_trip.created_at.isoformat(),
                     "updated_at": saved_trip.updated_at.isoformat(),
                 },
@@ -353,7 +363,7 @@ async def generate_trip_stream_body(
         )
 
 
-@router.post("/generate/body/dev")
+@router.post("/generate/body/dev", dependencies=[Depends(dev_only)])
 async def generate_trip_stream_body_dev(
     request_data: TripGenerateRequest,
     user_id: str | None = Depends(get_optional_user_id),

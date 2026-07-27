@@ -27,6 +27,13 @@ loguru>=0.7.0
 google-generativeai>=0.8.0
 zhipuai>=1.0.0
 
+# zhipuai 가 `import sniffio` 를 하면서 의존성으로 선언하지 않은 것을 보정.
+# 과거에는 httpx → anyio → sniffio 로 전이 설치됐으나, anyio 4.14 부터
+# sniffio 가 의존성에서 빠지면서 깨끗한 환경(Render 등)에서
+# ModuleNotFoundError: No module named 'sniffio' 로 기동에 실패한다.
+# 로컬 .venv 는 예전에 만들어져 sniffio 가 남아 있어 재현되지 않았다.
+sniffio>=1.3.0
+
 # Cache
 redis>=5.2.0
 

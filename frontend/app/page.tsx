@@ -14,12 +14,12 @@ export default function Home() {
   const [loggedIn] = useAuth(); // 👈 import 한 useAuth 사용
   
   const [destination, setDestination] = useState("");
-  
+
+  // 로그인 후 홈으로 돌아왔을 때 입력했던 목적지를 복원
   useEffect(() => {
-    console.log("token:", api.getAccessToken());
-    console.log("isAuthenticated:", api.isAuthenticated());
-    console.log("loggedIn:", loggedIn);
-  }, [loggedIn]);
+    const saved = sessionStorage.getItem("tripkit-destination");
+    if (saved) setDestination((current) => current || saved);
+  }, []);
 
   const [purposes, setPurposes] = useState<string[]>([]);
   const [optional, setOptional] = useState(false);
@@ -60,12 +60,29 @@ export default function Home() {
     }
   };
 
+  /** 로그인 페이지로 보내되, 완료 후 홈으로 돌아오도록 복귀 경로를 남긴다. */
+  const goLogin = () => {
+    localStorage.setItem("tripkit-return", "/");
+    router.push("/login");
+  };
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!destination.trim()) return setError("목적지를 입력해 주세요.");
+
+    // 여행 생성/조회 API가 모두 인증을 요구하므로, 비로그인 상태에서
+    // 생성을 시도하면 만들어도 열어볼 수 없다(401). 먼저 로그인으로 보낸다.
+    if (!loggedIn) {
+      sessionStorage.setItem("tripkit-destination", destination.trim());
+      setError("");
+      setToast("리스트를 만들려면 로그인이 필요해요");
+      goLogin();
+      return;
+    }
+
     setError(""); setLoading(true);
     sessionStorage.setItem("tripkit-destination", destination.trim());
-    
+
     try {
       const finalPurposes = purposes.length > 0 ? purposes : (customPurpose.trim() ? [customPurpose.trim()] : ["관광"]);
 
@@ -204,7 +221,8 @@ export default function Home() {
           )}
           
           <button className="primary cta" type="submit">
-            <span>내 여행 리스트 만들기</span><span aria-hidden="true">→</span>
+            <span>{loggedIn ? "내 여행 리스트 만들기" : "로그인하고 리스트 만들기"}</span>
+            <span aria-hidden="true">→</span>
           </button>
         </div>
       </form>
